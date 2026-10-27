@@ -1,0 +1,28 @@
+{
+  "name": "minijuegos-servidor-v2",
+  "version": "1.0.0",
+  "description": "Servidor code first de la plataforma de minijuegos educativos con IA (HX-ODM-JS: PostgreSQL con Sequelize y MongoDB con Mongoose)",
+  "main": "index.js",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env index.js",
+    "dev": "nodemon --exec \"node --env-file-if-exists=.env\" index.js",
+    "test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"tests/**/*.test.js\""
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "mongoose": "^8.10.0",
+    "pg": "^8.13.0",
+    "pg-hstore": "^2.3.4",
+    "sequelize": "^6.37.7",
+    "validator": "^13.12.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

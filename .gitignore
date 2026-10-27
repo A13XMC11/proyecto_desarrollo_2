@@ -1,0 +1,29 @@
+# Entrega actual: servidor hexagonal, sus pruebas y la documentación que describe
+# el código implementado. Los planes y diagramas anteriores quedan locales.
+/*
+!/.gitignore
+!/server-v2/
+
+# Archivos necesarios para instalar, ejecutar y verificar el servidor.
+/server-v2/*
+!/server-v2/.gitignore
+!/server-v2/.env.example
+!/server-v2/README.md
+!/server-v2/index.js
+!/server-v2/package.json
+!/server-v2/package-lock.json
+!/server-v2/src/
+!/server-v2/tests/
+
+# Dependencias, secretos y archivos generados dentro del código permitido.
+**/node_modules/
+**/.env
+**/.env.*
+!**/.env.example
+**/.DS_Store
+**/Thumbs.db
+**/coverage/
+**/.nyc_output/
+**/*.log
+**/*.tsbuildinfo
+**/.cache/
