@@ -1,5 +1,6 @@
 const EntradaInvalida = require("../../../Compartido/Dominio/Errores/EntradaInvalida");
 const Ejercicio = require("./Ejercicio");
+const ValidacionContenido = require("./ValidacionContenido");
 const {
   HABILIDADES, MECANICAS, TEMATICAS, CANTIDADES_EJERCICIOS, ESTADOS_VERSION, COMPATIBILIDAD
 } = require("../../../Compartido/Dominio/ValoresPermitidos");
@@ -48,6 +49,17 @@ class VersionJuego {
     if (this.estado === "aprobada" && !this.aprobadoEn) throw new EntradaInvalida("aprobadoEn requerido");
     this.creadoEn = creadoEn;
     this.actualizadoEn = actualizadoEn;
+  }
+
+  // Validación pedagógica (RF-021): se ejecuta al crear el borrador y antes de aprobar.
+  // No modifica la versión; lanza EntradaInvalida con el primer problema encontrado.
+  validarContenido(catalogo, opciones) {
+    return ValidacionContenido.validarContenido(this, catalogo, opciones);
+  }
+
+  // Frontera de entrada: rechaza campos fuera del contrato antes de construir los ejercicios.
+  static rechazarCamposDesconocidos(ejercicios) {
+    ValidacionContenido.rechazarCamposDesconocidos(ejercicios);
   }
 }
 

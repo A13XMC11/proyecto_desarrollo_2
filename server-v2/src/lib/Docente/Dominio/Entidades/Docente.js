@@ -17,7 +17,7 @@ class Docente {
     this.actualizadoEn = actualizadoEn;
   }
 
-  // Vista pública: sin hash
+  // Vista pública: sin hashs
   aPublico() {
     return {
       id: this.id,

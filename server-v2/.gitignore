@@ -1,2 +1,5 @@
 node_modules
 .env
+
+# Instrucciones locales de Claude Code
+CLAUDE.md

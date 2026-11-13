@@ -27,3 +27,6 @@
 **/*.log
 **/*.tsbuildinfo
 **/.cache/
+
+# Instrucciones locales de Claude Code
+**/CLAUDE.md
