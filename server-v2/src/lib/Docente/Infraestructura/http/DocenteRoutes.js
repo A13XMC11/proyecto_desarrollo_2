@@ -6,6 +6,7 @@ module.exports = function DocenteRoutes(controller) {
   const router = express.Router();
 
   router.post("/", envolverAsync(controller.registrar)); // el registro es público
+  router.post("/sesion", envolverAsync(controller.sesion)); // iniciar sesión es público
   router.get("/", requerirDocente, envolverAsync(controller.listar));
   router.get("/:id", requerirDocente, envolverAsync(controller.obtenerPorId));
   router.put("/:id", requerirDocente, envolverAsync(controller.actualizar));

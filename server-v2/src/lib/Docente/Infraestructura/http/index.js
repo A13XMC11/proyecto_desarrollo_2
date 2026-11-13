@@ -9,6 +9,7 @@ const ObtenerDocentePorId = require("../../Aplicacion/ObtenerDocentePorId");
 const ListarDocentes = require("../../Aplicacion/ListarDocentes");
 const ActualizarDocente = require("../../Aplicacion/ActualizarDocente");
 const EliminarDocente = require("../../Aplicacion/EliminarDocente");
+const IniciarSesion = require("../../Aplicacion/IniciarSesion");
 
 module.exports = function registerDocenteModule(app) {
   const repo = new DocenteRepositorySequelize();
@@ -19,7 +20,8 @@ module.exports = function registerDocenteModule(app) {
     listarDocentes: new ListarDocentes(repo),
     obtenerDocentePorId: new ObtenerDocentePorId(repo),
     actualizarDocente: new ActualizarDocente(repo),
-    eliminarDocente: new EliminarDocente(repo)
+    eliminarDocente: new EliminarDocente(repo),
+    iniciarSesion: new IniciarSesion(repo, hasheador)
   });
 
   app.use("/api/docentes", DocenteRoutes(controller));

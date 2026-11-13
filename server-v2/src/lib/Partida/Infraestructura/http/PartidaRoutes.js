@@ -9,6 +9,7 @@ module.exports = function PartidaRoutes(controller) {
   router.post("/", envolverAsync(controller.iniciar));
   router.get("/", envolverAsync(controller.listar));
   router.get("/:id", envolverAsync(controller.obtenerPorId));
+  router.get("/:id/jugable", envolverAsync(controller.jugable));
   router.post("/:id/intentos", envolverAsync(controller.intento));
   router.post("/:id/pistas", envolverAsync(controller.pista));
   router.post("/:id/finalizar", envolverAsync(controller.finalizar));

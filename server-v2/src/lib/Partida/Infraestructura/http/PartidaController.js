@@ -1,8 +1,9 @@
 const FILTROS = ["cursoId", "estudianteId", "habilidad", "estado", "desde", "hasta"];
 
 class PartidaController {
-  constructor({ iniciarPartida, listarPartidas, obtenerPartida, registrarIntento, registrarPista, finalizarPartida, abandonarPartida }) {
+  constructor({ iniciarPartida, obtenerPartidaJugable, listarPartidas, obtenerPartida, registrarIntento, registrarPista, finalizarPartida, abandonarPartida }) {
     this.iniciarPartida = iniciarPartida;
+    this.obtenerPartidaJugable = obtenerPartidaJugable;
     this.listarPartidas = listarPartidas;
     this.obtenerPartida = obtenerPartida;
     this.registrarIntento = registrarIntento;
@@ -27,6 +28,11 @@ class PartidaController {
 
   obtenerPorId = async (req, res) => {
     res.json(await this.obtenerPartida.ejecutar(req.docenteId, req.params.id));
+  };
+
+  // Vista para el modo aula: ejercicios sin respuestas correctas
+  jugable = async (req, res) => {
+    res.json(await this.obtenerPartidaJugable.ejecutar(req.docenteId, req.params.id));
   };
 
   intento = async (req, res) => {

@@ -49,7 +49,8 @@ function buildApp() {
     // Los errores de motor traducidos a 4xx se registran igualmente: ocultan fallos de programación
     if (status >= 500) console.error(err);
     else if (!err.statusCode) console.warn(`${err.name}: ${err.message}`);
-    res.status(status).json({ message });
+    // codigo estable para que el cliente decida qué mostrar (solo en errores de dominio)
+    res.status(status).json(err.statusCode && err.codigo ? { message, codigo: err.codigo } : { message });
   });
 
   return app;

@@ -1,5 +1,6 @@
 class DocenteController {
-  constructor({ registrarDocente, listarDocentes, obtenerDocentePorId, actualizarDocente, eliminarDocente }) {
+  constructor({ registrarDocente, listarDocentes, obtenerDocentePorId, actualizarDocente, eliminarDocente, iniciarSesion }) {
+    this.iniciarSesion = iniciarSesion;
     this.registrarDocente = registrarDocente;
     this.listarDocentes = listarDocentes;
     this.obtenerDocentePorId = obtenerDocentePorId;
@@ -10,6 +11,11 @@ class DocenteController {
   registrar = async (req, res) => {
     const docente = await this.registrarDocente.ejecutar(req.body);
     res.status(201).json(docente);
+  };
+
+  // Mientras no exista la sesión con cookie, devuelve el docente y el cliente envía su id en x-docente-id
+  sesion = async (req, res) => {
+    res.json(await this.iniciarSesion.ejecutar(req.body));
   };
 
   listar = async (req, res) => {

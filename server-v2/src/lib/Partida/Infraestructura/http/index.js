@@ -14,6 +14,7 @@ const EstudianteRepositorySequelize = require("../../../Aula/Infraestructura/Est
 const IniciarPartida = require("../../Aplicacion/IniciarPartida");
 const ListarPartidas = require("../../Aplicacion/ListarPartidas");
 const ObtenerPartida = require("../../Aplicacion/ObtenerPartida");
+const ObtenerPartidaJugable = require("../../Aplicacion/ObtenerPartidaJugable");
 const RegistrarIntento = require("../../Aplicacion/RegistrarIntento");
 const RegistrarPista = require("../../Aplicacion/RegistrarPista");
 const FinalizarPartida = require("../../Aplicacion/FinalizarPartida");
@@ -27,10 +28,11 @@ module.exports = function registerPartidaModule(app) {
   const canalRepo = new CanalRepositoryMongoose();
   const interaccionRepo = new InteraccionRepositoryMongoose();
 
+  const juegoRepo = new JuegoRepositoryMongoose();
+
   const controller = new PartidaController({
-    iniciarPartida: new IniciarPartida(
-      repo, new JuegoRepositoryMongoose(), new EstudianteRepositorySequelize(), canalRepo
-    ),
+    iniciarPartida: new IniciarPartida(repo, juegoRepo, new EstudianteRepositorySequelize(), canalRepo),
+    obtenerPartidaJugable: new ObtenerPartidaJugable(repo, juegoRepo, versionRepo),
     listarPartidas: new ListarPartidas(repo),
     obtenerPartida: new ObtenerPartida(repo),
     registrarIntento: new RegistrarIntento(repo, versionRepo),

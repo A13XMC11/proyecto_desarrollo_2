@@ -3,6 +3,7 @@ const NoEncontrado = require("../../Compartido/Dominio/Errores/NoEncontrado");
 const ConflictoDeEstado = require("../../Compartido/Dominio/Errores/ConflictoDeEstado");
 const EntradaInvalida = require("../../Compartido/Dominio/Errores/EntradaInvalida");
 const LimiteAlcanzado = require("../../Compartido/Dominio/Errores/LimiteAlcanzado");
+const { solucionDe } = require("../Dominio/Entidades/VistaJugable");
 
 const INTENTOS_POR_EJERCICIO = 2;
 
@@ -82,12 +83,17 @@ class RegistrarIntento {
       }
     }
 
-    return {
+    const resultado = {
       esCorrecto: intento.esCorrecto,
       numeroIntento: intento.numeroIntento,
       ejercicioActual: actual.ejercicioActual,
       terminada
     };
+    // Tras el segundo fallo se muestra la solución (nunca antes)
+    if (!intento.esCorrecto && intento.numeroIntento === INTENTOS_POR_EJERCICIO) {
+      resultado.solucion = solucionDe(version.ejercicios[indice]);
+    }
+    return resultado;
   }
 }
 
