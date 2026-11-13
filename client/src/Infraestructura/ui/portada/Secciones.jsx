@@ -1,6 +1,5 @@
-import { BookOpenCheck, Check, GitBranch, Archive, BarChart3, Lock, Users, Wand2, ClipboardCheck, MonitorPlay } from "lucide-react";
+import { BookOpenCheck, GitBranch, Archive, BarChart3, Lock, Users, Wand2, ClipboardCheck, MonitorPlay } from "lucide-react";
 import { useRevelar } from "../useRevelar";
-import { BotonEnlace } from "../componentes";
 
 const Revelar = ({ as: Etiq = "div", className = "", children, ...resto }) => {
   const ref = useRevelar();
@@ -108,45 +107,6 @@ export const EnElAula = () => (
           </Revelar>
         ))}
       </div>
-    </div>
-  </section>
-);
-
-const INCLUYE = [
-  "Cursos y estudiantes sin límite",
-  "Tu biblioteca de actividades guardadas",
-  "3 actividades nuevas con IA por día",
-  "Volver a jugar una actividad no gasta cupo"
-];
-
-export const Precio = () => (
-  <section id="precio" className="scroll-mt-20 bg-fondo py-20 sm:py-28">
-    <div className="mx-auto max-w-6xl px-4 sm:px-6">
-      <TituloSeccion antetitulo="Precio" titulo="Gratis para docentes" texto="Letritas es un proyecto académico. No hay planes de pago ni prueba que se vence." />
-      <Revelar className="mx-auto max-w-md overflow-hidden rounded-3xl bg-white shadow-xl shadow-marca-900/5 ring-1 ring-marca-100">
-        <div className="bg-marca-600 px-8 py-7 text-white">
-          <p className="font-medium text-marca-100">Cuenta docente</p>
-          <p className="mt-1 font-titulo text-5xl font-black">
-            $0 <span className="text-lg font-bold text-marca-100">para siempre</span>
-          </p>
-        </div>
-        <div className="px-8 py-7">
-          <ul className="grid gap-3">
-            {INCLUYE.map((texto) => (
-              <li key={texto} className="flex items-start gap-3">
-                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-marca-100 text-marca-700">
-                  <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
-                </span>
-                {texto}
-              </li>
-            ))}
-          </ul>
-          <BotonEnlace to="/registro" tamano="lg" className="mt-7 w-full">
-            Crear mi cuenta
-          </BotonEnlace>
-          <p className="mt-3 text-center text-sm text-tenue">El cupo de IA se renueva cada día.</p>
-        </div>
-      </Revelar>
     </div>
   </section>
 );

@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Animaciones data-[state] que usan los primitivos shadcn de los componentes de 21st.dev */
+@import "tw-animate-css";
 
 /* Tokens del sistema de diseño: azul y blanco, con un acento cálido solo para momentos de juego */
 @theme {
@@ -24,6 +26,21 @@
   --color-exito-suave: #dcfce7;
   --color-error: #b91c1c;
   --color-error-suave: #fee2e2;
+
+  /* Tokens semánticos de shadcn/ui (los usan los componentes de 21st.dev), apuntando a la misma paleta */
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-primary: #2563eb;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eff6ff;
+  --color-secondary-foreground: #1e40af;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #475569;
+  --color-accent: #eff6ff;
+  --color-accent-foreground: #1e40af;
+  --color-border: #e2e8f0;
+  --color-input: #e2e8f0;
+  --color-ring: #3b82f6;
 
   /* Curvas fuertes: las integradas de CSS se sienten blandas */
   --ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
@@ -104,13 +121,22 @@ dialog.dialogo::backdrop {
   .aviso { opacity: 0; transform: translateY(100%); }
 }
 
+/* Borde animado de la tarjeta de precio (BorderTrail de 21st.dev, en CSS en lugar de framer-motion) */
+.borde-recorrido {
+  animation: recorrer-borde 5s linear infinite;
+}
+@keyframes recorrer-borde {
+  from { offset-distance: 0%; }
+  to { offset-distance: 100%; }
+}
+
 /* Movimiento reducido: menos y más suave, no cero. Se queda la opacidad, se va el desplazamiento. */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   html.js .revelar { transform: none; }
   dialog.dialogo, .aviso { transform: none !important; }
   .animate-aparecer, .animate-acierto { animation-name: solo-opacidad; }
-  .animate-sacudir { animation: none; }
+  .animate-sacudir, .borde-recorrido { animation: none; }
   /* Tailwind 4 aplica active:scale-* con la propiedad `scale`, no con `transform` */
   .active\:scale-\[0\.97\]:active { scale: none; }
 }
