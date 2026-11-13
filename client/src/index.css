@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Tokens del sistema de diseño: azul y blanco, con un acento cálido solo para momentos de juego */
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-titulo: "Nunito", ui-rounded, "DM Sans", sans-serif;
+
+  --color-marca-50: #eff6ff;
+  --color-marca-100: #dbeafe;
+  --color-marca-200: #bfdbfe;
+  --color-marca-300: #93c5fd;
+  --color-marca-500: #3b82f6;
+  --color-marca-600: #2563eb;
+  --color-marca-700: #1d4ed8;
+  --color-marca-800: #1e40af;
+  --color-marca-900: #1e3a8a;
+
+  --color-tinta: #0f172a;
+  --color-tenue: #475569;
+  --color-borde: #e2e8f0;
+  --color-fondo: #f8fafc;
+  --color-acento: #fbbf24;
+  --color-exito: #15803d;
+  --color-exito-suave: #dcfce7;
+  --color-error: #b91c1c;
+  --color-error-suave: #fee2e2;
+
+  /* Curvas fuertes: las integradas de CSS se sienten blandas */
+  --ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-movimiento: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --animate-aparecer: aparecer 520ms var(--ease-salida) both;
+  --animate-acierto: acierto 260ms var(--ease-salida) both;
+  --animate-sacudir: sacudir 320ms var(--ease-movimiento) both;
+
+  @keyframes aparecer {
+    from { opacity: 0; transform: translateY(10px); }
+  }
+  @keyframes acierto {
+    from { opacity: 0.6; transform: scale(0.96); }
+  }
+  @keyframes sacudir {
+    25% { transform: translateX(-6px); }
+    50% { transform: translateX(5px); }
+    75% { transform: translateX(-3px); }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white font-sans text-tinta antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3 {
+    @apply font-titulo tracking-tight text-balance;
+  }
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-marca-600;
+  }
+}
+
+/* Revelado al hacer scroll (solo portada, una vez). Sin JS el contenido se ve igual. */
+html.js .revelar {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 560ms var(--ease-salida), transform 560ms var(--ease-salida);
+}
+html.js .revelar[data-visible="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Diálogos nativos: entran desde 0.96 con opacidad; salen más rápido */
+dialog.dialogo {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms var(--ease-salida), transform 200ms var(--ease-salida),
+    overlay 200ms allow-discrete, display 200ms allow-discrete;
+}
+@starting-style {
+  dialog.dialogo[open] { opacity: 0; transform: scale(0.96); }
+}
+dialog.dialogo:not([open]) {
+  opacity: 0;
+  transform: scale(0.98);
+  transition-duration: 140ms;
+}
+dialog.dialogo::backdrop {
+  background: rgb(15 23 42 / 0.45);
+}
+
+/* Avisos: entran desde abajo y se van por el mismo lado */
+.aviso {
+  transition: opacity 220ms var(--ease-salida), transform 220ms var(--ease-salida);
+}
+@starting-style {
+  .aviso { opacity: 0; transform: translateY(100%); }
+}
+
+/* Movimiento reducido: menos y más suave, no cero. Se queda la opacidad, se va el desplazamiento. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  html.js .revelar { transform: none; }
+  dialog.dialogo, .aviso { transform: none !important; }
+  .animate-aparecer, .animate-acierto { animation-name: solo-opacidad; }
+  .animate-sacudir { animation: none; }
+  /* Tailwind 4 aplica active:scale-* con la propiedad `scale`, no con `transform` */
+  .active\:scale-\[0\.97\]:active { scale: none; }
+}
+@keyframes solo-opacidad {
+  from { opacity: 0; }
+}

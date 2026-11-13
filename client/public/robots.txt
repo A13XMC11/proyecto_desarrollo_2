@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /$
+Allow: /registro
+Allow: /ingresar
+Disallow: /panel
+Disallow: /aula
+
+Sitemap: https://letritas.app/sitemap.xml

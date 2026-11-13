@@ -3,6 +3,7 @@
 /*
 !/.gitignore
 !/server-v2/
+!/client/
 
 # Archivos necesarios para instalar, ejecutar y verificar el servidor.
 /server-v2/*
@@ -30,3 +31,10 @@
 
 # Instrucciones locales de Claude Code
 **/CLAUDE.md
+
+# Capturas de pruebas de navegador
+.playwright-mcp/
+
+# Cliente: se versiona todo menos lo generado
+/client/dist/
+/client/dist-ssr/
