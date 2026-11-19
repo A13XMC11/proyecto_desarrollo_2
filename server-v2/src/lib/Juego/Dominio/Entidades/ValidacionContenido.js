@@ -77,7 +77,9 @@ function validarSilabas(ejercicio, catalogo, tematica, donde) {
   return { respuesta: ejercicio.palabraId, reveladores: [recurso.palabra] };
 }
 
-function validarContenido(version, catalogo, { permitirDiez = false } = {}) {
+// exigirCantidad: false valida solo los ejercicios presentes (un borrador puede estar incompleto);
+// la aprobación siempre lo exige.
+function validarContenido(version, catalogo, { permitirDiez = false, exigirCantidad = true } = {}) {
   if (!catalogo || typeof catalogo.obtenerRecurso !== "function") {
     throw new EntradaInvalida("catálogo de recursos requerido");
   }
@@ -85,7 +87,7 @@ function validarContenido(version, catalogo, { permitirDiez = false } = {}) {
   if (cantidadEjercicios === 10 && !permitirDiez) {
     throw new EntradaInvalida("la cantidad de 10 ejercicios no está habilitada");
   }
-  if (version.ejercicios.length !== cantidadEjercicios) {
+  if (exigirCantidad && version.ejercicios.length !== cantidadEjercicios) {
     throw new EntradaInvalida(
       `se esperaban ${cantidadEjercicios} ejercicios y hay ${version.ejercicios.length}`
     );

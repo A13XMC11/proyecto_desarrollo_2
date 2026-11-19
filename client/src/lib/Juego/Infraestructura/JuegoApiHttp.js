@@ -8,6 +8,8 @@ export const JuegoApiHttp = {
   archivar: (id) => pedir(`/juegos/${id}`, { metodo: "DELETE" }),
   desarchivar: (id) => pedir(`/juegos/${id}/desarchivar`, { metodo: "POST" }),
 
+  recursos: (tematica) => pedir("/recursos", { consulta: { tematica } }),
+
   listarVersiones: (juegoId) => pedir(`/juegos/${juegoId}/versiones`),
   crearVersion: (juegoId, datos) => pedir(`/juegos/${juegoId}/versiones`, { metodo: "POST", cuerpo: datos }),
   actualizarVersion: (juegoId, id, ejercicios) =>

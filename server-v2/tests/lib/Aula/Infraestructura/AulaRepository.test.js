@@ -120,7 +120,8 @@ describe("EstudianteRepositorySequelize", () => {
     const { obtenerSequelize } = require("../../../../src/Infraestructura/database/Sequelize");
     await assert.rejects(
       obtenerSequelize().query("DELETE FROM cursos WHERE id = :c", { replacements: { c } }),
-      (error) => error.parent?.code === "23503"
+      // RESTRICT llega como 23001 (restrict_violation); 23503 es el de NO ACTION
+      (error) => ["23001", "23503"].includes(error.parent?.code)
     );
   });
 });

@@ -10,3 +10,7 @@ export const useJuego = (id) =>
     const [juego, versiones] = await Promise.all([JuegoApiHttp.obtener(id), JuegoApiHttp.listarVersiones(id)]);
     return { juego, versiones: [...versiones].sort((a, b) => (b.numero || 0) - (a.numero || 0)) };
   }, [id]);
+
+// Palabras del catálogo de una temática (de ahí salen los ejercicios)
+export const useRecursos = (tematica) =>
+  useConsulta(() => (tematica ? JuegoApiHttp.recursos(tematica) : Promise.resolve([])), [tematica]);

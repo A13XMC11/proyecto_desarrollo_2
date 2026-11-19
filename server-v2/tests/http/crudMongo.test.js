@@ -7,13 +7,20 @@ const { crearAsegurarCanales } = require("../../src/lib/Canal/Infraestructura/ht
 const prueba = pruebasConBase("crudMongo", { sql: true, mongo: true });
 const llamar = conServidor();
 
-const ejercicio = (n) => ({
-  id: `e${n}`,
-  consigna: "¿Con qué vocal empieza?",
-  pista: "Piensa en el sonido",
-  opciones: [{ id: "a", texto: "a" }, { id: "e", texto: "e" }, { id: "i", texto: "i" }],
-  respuestaCorrectaId: "a"
-});
+// Ejercicios coherentes con el catálogo: e2 se responde con "o" (oso); los demás, con "a" (abeja).
+// La consigna lleva el número para que no se repita con la misma respuesta.
+const ejercicio = (n) => {
+  const vocal = n === 2 ? "o" : "a";
+  const otras = ["e", "i"];
+  return {
+    id: `e${n}`,
+    consigna: `¿Con qué vocal empieza esta palabra? (${n})`,
+    pista: "Piensa en el sonido",
+    recursoId: n === 2 ? "oso" : "abeja",
+    opciones: [vocal, ...otras].map((t) => ({ id: t, texto: t })),
+    respuestaCorrectaId: vocal
+  };
+};
 const ejercicios = (cantidad) => Array.from({ length: cantidad }, (_, i) => ejercicio(i + 1));
 
 // Docente con curso y estudiante, más un docente ajeno
@@ -116,6 +123,58 @@ describe("CRUD HTTP sobre MongoDB", () => {
     assert.equal((await llamar(`${ruta}/${nueva.cuerpo.id}`, { metodo: "DELETE", docente: esc.ajeno })).status, 404);
     assert.equal((await llamar(`${ruta}/${nueva.cuerpo.id}`, { metodo: "DELETE", docente: esc.docente })).status, 204);
     assert.equal((await llamar(`${ruta}/${nueva.cuerpo.id}`, { docente: esc.docente })).cuerpo.estado, "descartada");
+  });
+
+  prueba("catálogo: solo se listan recursos a docentes autenticados, filtrables por temática", async () => {
+    const esc = await escenario();
+    assert.equal((await llamar("/api/recursos")).status, 401);
+    const todos = await llamar("/api/recursos", { docente: esc.docente });
+    assert.equal(todos.status, 200);
+    assert.ok(todos.cuerpo.length >= 15);
+    assert.ok(todos.cuerpo.every((r) => r.id && r.palabra && r.tematica && Array.isArray(r.silabas)));
+    const animales = await llamar("/api/recursos?tematica=animales", { docente: esc.docente });
+    assert.ok(animales.cuerpo.length > 0 && animales.cuerpo.every((r) => r.tematica === "animales"));
+    assert.equal((await llamar("/api/recursos?tematica=espacio", { docente: esc.docente })).status, 400);
+  });
+
+  prueba("contenido: el servidor rechaza lo que no sale del catálogo, al crear, al editar y al aprobar", async () => {
+    const esc = await escenario();
+    const juego = (await crearJuego(esc)).cuerpo.id;
+    const ruta = `/api/juegos/${juego}/versiones`;
+    const config = { tematica: "animales", cantidadEjercicios: 5 };
+    const crear = (ejercicios) => llamar(ruta, { metodo: "POST", docente: esc.docente, cuerpo: { ...config, ejercicios } });
+
+    const inexistente = await crear([{ ...ejercicio(1), recursoId: "fantasma" }]);
+    assert.equal(inexistente.status, 400);
+    assert.match(inexistente.cuerpo.error?.mensaje || inexistente.cuerpo.mensaje || JSON.stringify(inexistente.cuerpo), /catálogo/);
+    assert.equal((await crear([{ ...ejercicio(1), recursoId: "uva" }])).status, 400, "recurso de otra temática");
+    assert.equal((await crear([{ ...ejercicio(1), respuestaCorrectaId: "e" }])).status, 400, "la respuesta no es la vocal inicial");
+    assert.equal((await crear([{ ...ejercicio(1), extra: "x" }])).status, 400, "campo desconocido");
+    assert.equal((await crear([{ ...ejercicio(1), consigna: "¿Con qué vocal empieza abeja?" }])).status, 400, "la consigna revela la palabra");
+    assert.equal((await llamar(ruta, { docente: esc.docente })).cuerpo.length, 0, "ningún rechazo dejó un borrador");
+
+    const borrador = await crear(ejercicios(2));
+    assert.equal(borrador.status, 201);
+    const id = borrador.cuerpo.id;
+    const mala = await llamar(`${ruta}/${id}`, { metodo: "PUT", docente: esc.docente, cuerpo: { ejercicios: [{ ...ejercicio(1), recursoId: "fantasma" }] } });
+    assert.equal(mala.status, 400);
+    assert.equal((await llamar(`${ruta}/${id}`, { docente: esc.docente })).cuerpo.ejercicios.length, 2, "una edición rechazada no altera el borrador");
+    assert.equal((await llamar(`${ruta}/${id}`, { metodo: "PUT", docente: esc.docente, cuerpo: { ejercicios: [ejercicio(1), ejercicio(1)] } })).status, 400, "ids repetidos");
+
+    // Lo que devuelve la API debe poder reenviarse tal cual (así lo hace "Nueva versión" en el cliente)
+    assert.equal((await llamar(`${ruta}/${id}`, { metodo: "PUT", docente: esc.docente, cuerpo: { ejercicios: ejercicios(5) } })).status, 200);
+    assert.equal((await llamar(`${ruta}/${id}/aprobar`, { metodo: "POST", docente: esc.docente })).status, 200);
+    const aprobada = (await llamar(`${ruta}/${id}`, { docente: esc.docente })).cuerpo;
+    const copia = await llamar(ruta, { metodo: "POST", docente: esc.docente, cuerpo: { ...config, ejercicios: aprobada.ejercicios } });
+    assert.equal(copia.status, 201, JSON.stringify(copia.cuerpo));
+    assert.equal(copia.cuerpo.ejercicios.length, 5);
+    const reenviada = await llamar(`${ruta}/${copia.cuerpo.id}`, { metodo: "PUT", docente: esc.docente, cuerpo: { ejercicios: copia.cuerpo.ejercicios } });
+    assert.equal(reenviada.status, 200, JSON.stringify(reenviada.cuerpo));
+    assert.equal((await llamar(`${ruta}/${copia.cuerpo.id}/aprobar`, { metodo: "POST", docente: esc.docente })).status, 200);
+
+    const diez = await llamar(ruta, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 10, ejercicios: [] } });
+    assert.equal(diez.status, 400, "10 ejercicios no están habilitados");
+    assert.match(JSON.stringify(diez.cuerpo), /10 ejercicios/);
   });
 
   prueba("partidas: iniciar, pistas, intentos evaluados en el servidor, finalizar y abandonar", async () => {

@@ -3,7 +3,8 @@
 
 export const GRADOS = ["1.º EGB", "2.º EGB", "3.º EGB"];
 export const FRANJAS_EDAD = [5, 6, 7];
-export const CANTIDADES_EJERCICIOS = [5, 10];
+// El servidor habilita 10 ejercicios solo con PERMITIR_10_EJERCICIOS; la primera versión usa 5
+export const CANTIDADES_EJERCICIOS = [5];
 
 export const HABILIDADES = {
   vocales: { texto: "Vocales", mecanica: "seleccionar_opcion", mecanicaTexto: "Elegir la respuesta" },

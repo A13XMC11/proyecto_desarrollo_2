@@ -57,6 +57,14 @@ describe("VersionJuego.validarContenido", () => {
     assert.throws(() => versionVocales(cincoVocales().slice(0, 4)).validarContenido(catalogo), EntradaInvalida);
   });
 
+  it("en un borrador incompleto (exigirCantidad: false) valida lo que hay, sin exigir la cantidad", () => {
+    const incompleta = versionVocales(cincoVocales().slice(0, 2));
+    assert.doesNotThrow(() => incompleta.validarContenido(catalogo, { exigirCantidad: false }));
+    assert.doesNotThrow(() => versionVocales([]).validarContenido(catalogo, { exigirCantidad: false }));
+    const mala = versionVocales([ejVocal("e1", "fantasma", "o")]);
+    assert.throws(() => mala.validarContenido(catalogo, { exigirCantidad: false }), /no existe en el catálogo/);
+  });
+
   it("10 ejercicios solo si está habilitado", () => {
     const diez = Array.from({ length: 10 }, (_, i) =>
       ejVocal(`e${i}`, "oso", "o", { consigna: `Mira la imagen número ${i}` }));

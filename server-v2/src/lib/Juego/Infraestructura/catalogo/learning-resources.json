@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "version": 1,
+    "descripcion": "Catálogo inicial de palabras para las actividades de vocales y de sílabas",
+    "procedencia": "Palabras y divisiones silábicas elaboradas por el equipo; no incluye imágenes ni audio, por lo que no hay permisos de uso pendientes",
+    "revision": "Pendiente de contraste con un docente de grados menores (§17 del plan)"
+  },
+  "recursos": [
+    { "id": "abeja", "palabra": "abeja", "tematica": "animales", "silabas": ["a", "be", "ja"], "vocalInicial": "a" },
+    { "id": "elefante", "palabra": "elefante", "tematica": "animales", "silabas": ["e", "le", "fan", "te"], "vocalInicial": "e" },
+    { "id": "iguana", "palabra": "iguana", "tematica": "animales", "silabas": ["i", "gua", "na"], "vocalInicial": "i" },
+    { "id": "oso", "palabra": "oso", "tematica": "animales", "silabas": ["o", "so"], "vocalInicial": "o" },
+    { "id": "urraca", "palabra": "urraca", "tematica": "animales", "silabas": ["u", "rra", "ca"], "vocalInicial": "u" },
+    { "id": "gato", "palabra": "gato", "tematica": "animales", "silabas": ["ga", "to"] },
+    { "id": "mariposa", "palabra": "mariposa", "tematica": "animales", "silabas": ["ma", "ri", "po", "sa"] },
+
+    { "id": "anillo", "palabra": "anillo", "tematica": "objetos_cotidianos", "silabas": ["a", "ni", "llo"], "vocalInicial": "a" },
+    { "id": "escoba", "palabra": "escoba", "tematica": "objetos_cotidianos", "silabas": ["es", "co", "ba"], "vocalInicial": "e" },
+    { "id": "iman", "palabra": "imán", "tematica": "objetos_cotidianos", "silabas": ["i", "mán"], "vocalInicial": "i" },
+    { "id": "olla", "palabra": "olla", "tematica": "objetos_cotidianos", "silabas": ["o", "lla"], "vocalInicial": "o" },
+    { "id": "uniforme", "palabra": "uniforme", "tematica": "objetos_cotidianos", "silabas": ["u", "ni", "for", "me"], "vocalInicial": "u" },
+    { "id": "mesa", "palabra": "mesa", "tematica": "objetos_cotidianos", "silabas": ["me", "sa"] },
+    { "id": "silla", "palabra": "silla", "tematica": "objetos_cotidianos", "silabas": ["si", "lla"] },
+
+    { "id": "arena", "palabra": "arena", "tematica": "naturaleza", "silabas": ["a", "re", "na"], "vocalInicial": "a" },
+    { "id": "estrella", "palabra": "estrella", "tematica": "naturaleza", "silabas": ["es", "tre", "lla"], "vocalInicial": "e" },
+    { "id": "isla", "palabra": "isla", "tematica": "naturaleza", "silabas": ["is", "la"], "vocalInicial": "i" },
+    { "id": "oceano", "palabra": "océano", "tematica": "naturaleza", "silabas": ["o", "cé", "a", "no"], "vocalInicial": "o" },
+    { "id": "uva", "palabra": "uva", "tematica": "naturaleza", "silabas": ["u", "va"], "vocalInicial": "u" },
+    { "id": "luna", "palabra": "luna", "tematica": "naturaleza", "silabas": ["lu", "na"] },
+    { "id": "montana", "palabra": "montaña", "tematica": "naturaleza", "silabas": ["mon", "ta", "ña"] }
+  ]
+}

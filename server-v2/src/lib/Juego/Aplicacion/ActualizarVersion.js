@@ -3,11 +3,14 @@ const NoEncontrado = require("../../Compartido/Dominio/Errores/NoEncontrado");
 const ConflictoDeEstado = require("../../Compartido/Dominio/Errores/ConflictoDeEstado");
 const EntradaInvalida = require("../../Compartido/Dominio/Errores/EntradaInvalida");
 
-// Solo se editan los ejercicios, y solo mientras la versión sea un borrador
+// Solo se editan los ejercicios, y solo mientras la versión sea un borrador.
+// Tras cada edición se valida de nuevo contra el catálogo (RF-022).
 class ActualizarVersion {
-  constructor(versionRepository, juegoRepository) {
+  constructor(versionRepository, juegoRepository, catalogo, { permitirDiez = false } = {}) {
     this.versionRepository = versionRepository;
     this.juegoRepository = juegoRepository;
+    this.catalogo = catalogo;
+    this.permitirDiez = permitirDiez;
   }
 
   async ejecutar(docenteId, juegoId, id, { ejercicios } = {}) {
@@ -20,7 +23,9 @@ class ActualizarVersion {
       throw new ConflictoDeEstado("Solo se puede editar un borrador", "VERSION_NO_EDITABLE");
     }
 
+    VersionJuego.rechazarCamposDesconocidos(ejercicios);
     const validada = new VersionJuego({ ...actual, ejercicios });
+    validada.validarContenido(this.catalogo, { permitirDiez: this.permitirDiez, exigirCantidad: false });
     const actualizada = await this.versionRepository.actualizarBorrador(id, juego.id, { ejercicios: validada.ejercicios });
     if (!actualizada) throw new ConflictoDeEstado("Solo se puede editar un borrador", "VERSION_NO_EDITABLE");
     return actualizada;

@@ -1,13 +1,13 @@
 import { Plus, Trash2, Wand2 } from "lucide-react";
-import { Boton, Campo } from "../../../../Infraestructura/ui/componentes";
-import { ejercicioVacio, separarSilabas, sugerirOpciones } from "../../Dominio/Ejercicios";
+import { Boton, Campo, Selector } from "../../../../Infraestructura/ui/componentes";
+import { ejercicioVacio, recursosPara, sugerirOpciones } from "../../Dominio/Ejercicios";
 
-const EjercicioOpcion = ({ ejercicio, errores, cambiar }) => {
+const EjercicioOpcion = ({ ejercicio, recurso, errores, cambiar }) => {
   const sugerir = () => {
-    const sugerencia = sugerirOpciones(ejercicio.palabra);
+    const sugerencia = sugerirOpciones(recurso);
     if (sugerencia) cambiar({ opciones: sugerencia.opciones, correcta: sugerencia.correcta });
   };
-  const puedeSugerir = Boolean(sugerirOpciones(ejercicio.palabra));
+  const puedeSugerir = Boolean(sugerirOpciones(recurso));
   return (
     <fieldset>
       <legend className="mb-2 text-sm font-medium">Opciones (marca la correcta)</legend>
@@ -29,34 +29,45 @@ const EjercicioOpcion = ({ ejercicio, errores, cambiar }) => {
         <p role="alert" className="mt-1.5 text-sm text-error">{errores.opciones}</p>
       ) : (
         <button type="button" onClick={sugerir} disabled={!puedeSugerir} className="mt-2 inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-marca-700 hover:bg-marca-50 disabled:cursor-not-allowed disabled:text-slate-400">
-          <Wand2 className="size-4" aria-hidden="true" /> {puedeSugerir ? "Sugerir vocales a partir de la palabra" : "La palabra debe empezar con vocal para sugerir opciones"}
+          <Wand2 className="size-4" aria-hidden="true" /> {puedeSugerir ? "Sugerir vocales a partir de la palabra" : "Elige una palabra para sugerir las opciones"}
         </button>
       )}
     </fieldset>
   );
 };
 
-const EjercicioSilabas = ({ ejercicio, errores, cambiar }) => (
+// Las sílabas vienen del catálogo (división aprobada): solo se muestran, no se escriben
+const EjercicioSilabas = ({ recurso }) => (
   <div>
-    <Campo etiqueta="Sílabas en orden" value={ejercicio.silabas} onChange={(e) => cambiar({ silabas: e.target.value })} error={errores.silabas} ayuda="Sepáralas con guiones: ma-ri-po-sa" />
-    {separarSilabas(ejercicio.silabas).length > 1 && !errores.silabas && (
-      <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Vista previa de las piezas">
-        {separarSilabas(ejercicio.silabas).map((s, i) => (
-          <span key={i} className="rounded-lg bg-marca-50 px-2.5 py-1 font-titulo font-black text-marca-800 ring-1 ring-marca-200">{s}</span>
+    <p className="mb-2 text-sm font-medium">Sílabas en orden</p>
+    {recurso ? (
+      <div className="flex flex-wrap gap-1.5" aria-label="Sílabas de la palabra">
+        {recurso.silabas.map((silaba, i) => (
+          <span key={i} className="rounded-lg bg-marca-50 px-2.5 py-1 font-titulo font-black text-marca-800 ring-1 ring-marca-200">{silaba}</span>
         ))}
       </div>
+    ) : (
+      <p className="text-sm text-tenue">Al elegir la palabra verás sus sílabas.</p>
     )}
   </div>
 );
 
-export const EditorEjercicios = ({ ejercicios, setEjercicios, mecanica, cantidad, errores = [] }) => {
+export const EditorEjercicios = ({ ejercicios, setEjercicios, mecanica, cantidad, errores = [], recursos = [] }) => {
+  const disponibles = recursosPara(recursos, mecanica);
   const cambiar = (i) => (cambios) => setEjercicios((lista) => lista.map((e, k) => (k === i ? { ...e, ...cambios } : e)));
+  // Al elegir la palabra, en vocales se proponen de una vez las tres opciones
+  const elegirRecurso = (i) => (e) => {
+    const recurso = recursos.find((r) => r.id === e.target.value);
+    const sugerencia = mecanica === "seleccionar_opcion" ? sugerirOpciones(recurso) : null;
+    cambiar(i)({ recursoId: e.target.value, ...(sugerencia && { opciones: sugerencia.opciones, correcta: sugerencia.correcta }) });
+  };
   const quitar = (i) => setEjercicios((lista) => lista.filter((_, k) => k !== i));
 
   return (
     <div className="grid gap-4">
       {ejercicios.map((ejercicio, i) => {
         const err = errores[i] || {};
+        const recurso = recursos.find((r) => r.id === ejercicio.recursoId);
         return (
           <section key={i} aria-label={`Ejercicio ${i + 1}`} className="rounded-2xl border border-borde bg-white p-5">
             <div className="mb-4 flex items-center justify-between">
@@ -66,14 +77,25 @@ export const EditorEjercicios = ({ ejercicios, setEjercicios, mecanica, cantidad
               </button>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Campo etiqueta="Palabra" maxLength={40} value={ejercicio.palabra} onChange={(e) => cambiar(i)({ palabra: e.target.value })} error={err.palabra} placeholder={mecanica === "seleccionar_opcion" ? "oso" : "gato"} />
+              <Selector
+                etiqueta="Palabra del catálogo"
+                value={ejercicio.recursoId}
+                onChange={elegirRecurso(i)}
+                error={err.recursoId}
+                opciones={[
+                  { valor: "", texto: "Elige una palabra…" },
+                  // Una palabra heredada que ya no está disponible se muestra para poder cambiarla, no se pierde en silencio
+                  ...(ejercicio.recursoId && !recurso ? [{ valor: ejercicio.recursoId, texto: `${ejercicio.recursoId} (no disponible)` }] : []),
+                  ...disponibles.map((r) => ({ valor: r.id, texto: r.palabra }))
+                ]}
+              />
               <Campo etiqueta="Pista (opcional)" maxLength={100} value={ejercicio.pista} onChange={(e) => cambiar(i)({ pista: e.target.value })} placeholder="Suena como cuando algo te sorprende: ¡oh!" />
               <Campo className="sm:col-span-2" etiqueta="Consigna" maxLength={140} value={ejercicio.consigna} onChange={(e) => cambiar(i)({ consigna: e.target.value })} error={err.consigna} />
               <div className="sm:col-span-2">
                 {mecanica === "seleccionar_opcion" ? (
-                  <EjercicioOpcion ejercicio={ejercicio} errores={err} cambiar={cambiar(i)} />
+                  <EjercicioOpcion ejercicio={ejercicio} recurso={recurso} errores={err} cambiar={cambiar(i)} />
                 ) : (
-                  <EjercicioSilabas ejercicio={ejercicio} errores={err} cambiar={cambiar(i)} />
+                  <EjercicioSilabas recurso={recurso} />
                 )}
               </div>
             </div>

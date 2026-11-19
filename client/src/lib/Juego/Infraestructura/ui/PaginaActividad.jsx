@@ -6,7 +6,7 @@ import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { Confirmar } from "../../../Aula/Infraestructura/ui/PaginaCursos";
 import { ESTADOS_JUEGO, HABILIDADES, TEMATICAS } from "../../Dominio/ValoresPermitidos";
 import { aContrato, aFormulario, revisar } from "../../Dominio/Ejercicios";
-import { useJuego } from "../../Aplicacion/useJuegos";
+import { useJuego, useRecursos } from "../../Aplicacion/useJuegos";
 import { JuegoApiHttp } from "../JuegoApiHttp";
 import { EditorEjercicios } from "./EditorEjercicios";
 
@@ -55,6 +55,8 @@ export const PaginaActividad = () => {
   const borrador = versiones.find((v) => v.estado === "borrador");
   const vigente = versiones.find((v) => v.id === juego?.versionActualId);
   const mecanica = juego?.mecanica;
+  const catalogo = useRecursos(borrador?.configuracion.tematica);
+  const recursos = catalogo.datos || [];
 
   useEffect(() => {
     setEjercicios(aFormulario(borrador?.ejercicios));
@@ -73,7 +75,11 @@ export const PaginaActividad = () => {
   };
 
   const validar = () => {
-    const encontrados = revisar(ejercicios, mecanica);
+    if (!recursos.length) {
+      avisar("El catálogo de palabras todavía no cargó. Inténtalo de nuevo en un momento.", "error");
+      return false;
+    }
+    const encontrados = revisar(ejercicios, mecanica, recursos);
     setErrores(encontrados);
     const hay = encontrados.some((e) => Object.keys(e).length);
     if (hay) avisar("Hay ejercicios por corregir. Están marcados en rojo.", "error");
@@ -82,7 +88,7 @@ export const PaginaActividad = () => {
 
   const guardar = conAccion("guardar", async () => {
     if (!validar()) return;
-    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, mecanica));
+    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, mecanica, recursos));
     avisar("Borrador guardado.");
     consulta.recargar();
   });
@@ -94,7 +100,7 @@ export const PaginaActividad = () => {
       avisar(`Para aprobar hacen falta exactamente ${cantidad} ejercicios.`, "error");
       return;
     }
-    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, mecanica));
+    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, mecanica, recursos));
     await JuegoApiHttp.aprobarVersion(id, borrador.id);
     avisar("Actividad aprobada. Ya se puede jugar en el aula.");
     consulta.recargar();
@@ -180,7 +186,8 @@ export const PaginaActividad = () => {
               <Boton tamano="sm" cargando={ocupado === "aprobar"} onClick={aprobar}><CheckCircle2 className="size-4" aria-hidden="true" /> Aprobar</Boton>
             </div>
           </Tarjeta>
-          <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} mecanica={mecanica} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} />
+          <MensajeError error={catalogo.error} alReintentar={catalogo.recargar} />
+          <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} mecanica={mecanica} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
         </section>
       ) : vigente ? (
         <section aria-labelledby="titulo-vigente">

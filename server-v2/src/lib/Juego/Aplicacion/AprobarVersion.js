@@ -1,12 +1,14 @@
 const NoEncontrado = require("../../Compartido/Dominio/Errores/NoEncontrado");
 const ConflictoDeEstado = require("../../Compartido/Dominio/Errores/ConflictoDeEstado");
-const EntradaInvalida = require("../../Compartido/Dominio/Errores/EntradaInvalida");
 
-// Aprobar deja la versión inmutable y la hace la vigente del juego (que pasa a "listo")
+// Aprobar deja la versión inmutable y la hace la vigente del juego (que pasa a "listo").
+// Antes de aprobar se valida el contenido completo contra el catálogo vigente (RF-021).
 class AprobarVersion {
-  constructor(versionRepository, juegoRepository) {
+  constructor(versionRepository, juegoRepository, catalogo, { permitirDiez = false } = {}) {
     this.versionRepository = versionRepository;
     this.juegoRepository = juegoRepository;
+    this.catalogo = catalogo;
+    this.permitirDiez = permitirDiez;
   }
 
   async ejecutar(docenteId, juegoId, id) {
@@ -17,10 +19,7 @@ class AprobarVersion {
     if (version.estado !== "borrador") {
       throw new ConflictoDeEstado("Solo se puede aprobar un borrador", "VERSION_NO_APROBABLE");
     }
-    const requeridos = version.configuracion.cantidadEjercicios;
-    if (version.ejercicios.length !== requeridos) {
-      throw new EntradaInvalida(`La versión debe tener exactamente ${requeridos} ejercicios para aprobarse`);
-    }
+    version.validarContenido(this.catalogo, { permitirDiez: this.permitirDiez });
 
     const aprobada = await this.versionRepository.aprobar(id, juego.id);
     if (!aprobada) throw new ConflictoDeEstado("Solo se puede aprobar un borrador", "VERSION_NO_APROBABLE");
