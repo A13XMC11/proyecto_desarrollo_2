@@ -10,6 +10,7 @@ class ISesionJuegoRepository {
   async findByFiltros(docenteId, filtros) {}
   async listarRecientes(docenteId, limite) {}
   async listarEnCurso(docenteId, limite) {}
+  async contar(docenteId, filtros) {}
 }
 
 module.exports = ISesionJuegoRepository;

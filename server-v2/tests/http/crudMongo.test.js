@@ -329,4 +329,43 @@ describe("CRUD HTTP sobre MongoDB", () => {
     assert.equal((await llamar("/api/interacciones", { docente: esc.docente })).status, 404, "falta la partida");
     assert.equal((await llamar(`/api/interacciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente: esc.docente })).status, 404, "no se elimina");
   });
+
+  prueba("resultados e inicio: calculados en el servidor, solo con partidas propias", async () => {
+    const esc = await escenario();
+    const juego = (await crearJuego(esc)).cuerpo.id;
+    const rutaV = `/api/juegos/${juego}/versiones`;
+    const version = (await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 5, ejercicios: ejercicios(5) } })).cuerpo.id;
+    await llamar(`${rutaV}/${version}/aprobar`, { metodo: "POST", docente: esc.docente });
+
+    // Partida terminada: e1 bien al primer intento, e2 mal y luego bien con pista
+    const partida = (await llamar("/api/partidas", { metodo: "POST", docente: esc.docente, cuerpo: { estudianteId: esc.estudiante, juegoId: juego } })).cuerpo.id;
+    const ruta = `/api/partidas/${partida}`;
+    await llamar(`${ruta}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e1", eleccion: "a", operacionId: "res-1" } });
+    await llamar(`${ruta}/pistas`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e2", operacionId: "res-2" } });
+    await llamar(`${ruta}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e2", eleccion: "a", operacionId: "res-3" } });
+    await llamar(`${ruta}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e2", eleccion: "o", operacionId: "res-4" } });
+    assert.equal((await llamar(`${ruta}/finalizar`, { metodo: "POST", docente: esc.docente })).status, 200);
+
+    const r = await llamar(`/api/resultados?cursoId=${esc.curso}`, { docente: esc.docente });
+    assert.equal(r.status, 200);
+    assert.deepEqual(
+      [r.cuerpo.resumen.partidas, r.cuerpo.resumen.respondidos, r.cuerpo.resumen.primerIntento, r.cuerpo.resumen.sinAyuda, r.cuerpo.resumen.completados, r.cuerpo.resumen.disponibles],
+      [1, 2, 1, 1, 2, 5]
+    );
+    assert.equal(r.cuerpo.partidas[0].titulo, "Las vocales");
+    assert.equal(r.cuerpo.porHabilidad[0].habilidad, "vocales");
+    assert.equal((await llamar(`/api/resultados?juegoId=${juego}`, { docente: esc.docente })).cuerpo.partidas.length, 1);
+    assert.equal((await llamar(`/api/resultados?habilidad=palabras_silabas`, { docente: esc.docente })).cuerpo.partidas.length, 0);
+    assert.equal((await llamar(`/api/resultados?habilidad=otra`, { docente: esc.docente })).status, 400);
+    assert.equal((await llamar(`/api/resultados?cursoId[$ne]=x`, { docente: esc.docente })).status, 200, "los filtros no aceptan operadores");
+    assert.equal((await llamar("/api/resultados", { docente: esc.ajeno })).cuerpo.partidas.length, 0, "otro docente no ve estos resultados");
+
+    const inicio = await llamar("/api/inicio", { docente: esc.docente });
+    assert.equal(inicio.status, 200);
+    assert.equal(inicio.cuerpo.cursosActivos, 1);
+    assert.equal(inicio.cuerpo.actividades.total, 1);
+    assert.equal(inicio.cuerpo.enCurso.total, 0);
+    assert.equal(inicio.cuerpo.terminadasSemana, 1);
+    assert.equal((await llamar("/api/inicio")).status, 401);
+  });
 });

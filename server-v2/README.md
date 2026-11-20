@@ -65,6 +65,8 @@ Cada docente solo ve y modifica sus propios datos. No hay borrado físico salvo 
 | Partida (MongoDB) | `POST/GET /api/partidas`, `GET/DELETE /api/partidas/:id`, `POST .../:id/intentos`, `.../pistas`, `.../finalizar` | abandona una partida en curso |
 | Interacción (MongoDB) | `POST/GET /api/interacciones?sesionId=` | append-only: no se edita ni se elimina |
 | Canal (MongoDB) | `GET /api/canales`, `GET /api/canales/:codigo` | catálogo fijo de 4 canales: solo lectura |
+| Resultados (MongoDB) | `GET /api/resultados?cursoId=&estudianteId=&habilidad=&juegoId=&desde=&hasta=` | solo lectura: `{ resumen, porEstudiante, porHabilidad, partidas }`. Los agregados solo cuentan partidas finalizadas; los indicadores siguen el §7.3 (primer intento, sin pista, intentos y completados / disponibles) |
+| Inicio | `GET /api/inicio` | solo lectura: cursos activos, total y recientes de la biblioteca, partidas para retomar con su título y partidas terminadas en los últimos 7 días |
 
 Reglas que aplican los casos de uso: el servidor evalúa los intentos (el cliente solo envía la elección), una partida solo se inicia sobre un juego con versión aprobada, un solo borrador de versión por juego,
 el curso/estudiante de un juego o partida deben ser del docente (se comprueba en PostgreSQL antes de escribir en MongoDB) y las solicitudes de generación son idempotentes por clave.
