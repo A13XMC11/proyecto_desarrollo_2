@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Eye, Lightbulb, RotateCcw } from "lucide-react";
 import { Boton } from "../../../../Infraestructura/ui/componentes";
 import { Dialogo } from "../../../../Infraestructura/ui/Dialogo";
@@ -15,10 +15,26 @@ const Contenido = ({ ejercicios }) => {
   const [resultado, setResultado] = useState(null); // { esCorrecto, eleccion, solucion? }
   const [verPista, setVerPista] = useState(false);
 
+  const seccion = useRef(null);
+  const siguiente = useRef(null);
+  const repetir = useRef(null);
+
   const ejercicio = ejercicios[indice];
   const Mecanica = MECANICAS[ejercicio.tipo];
   const agotado = resultado && !resultado.esCorrecto && intentos >= MAXIMO_INTENTOS;
   const fase = !resultado ? "respondiendo" : resultado.esCorrecto || agotado ? "resuelto" : "reintentar";
+  const ultimo = indice === ejercicios.length - 1;
+
+  // Al responder, el botón pulsado queda desactivado y el foco se perdería: se lleva al siguiente paso
+  useEffect(() => {
+    if (fase === "resuelto") (ultimo ? repetir : siguiente).current?.focus();
+  }, [fase, ultimo]);
+
+  // Tras "Intentar otra vez" el foco vuelve a la primera opción del ejercicio
+  const reintentar = () => {
+    setResultado(null);
+    requestAnimationFrame(() => seccion.current?.querySelector("[role=group] button:not([disabled]), [aria-label='Sílabas disponibles'] button")?.focus());
+  };
 
   const ir = (nuevo) => {
     setIndice(nuevo);
@@ -49,7 +65,7 @@ const Contenido = ({ ejercicios }) => {
         </div>
       </div>
 
-      <section key={`${ejercicio.id}-${indice}`} className="animate-aparecer rounded-[2rem] bg-white p-5 ring-1 ring-marca-100 sm:p-8" aria-labelledby="previa-consigna">
+      <section ref={seccion} key={`${ejercicio.id}-${indice}`} className="animate-aparecer rounded-[2rem] bg-white p-5 ring-1 ring-marca-100 sm:p-8" aria-labelledby="previa-consigna">
         <p id="previa-consigna" className="text-center text-xl text-tenue sm:text-2xl">{ejercicio.consigna}</p>
         {ejercicio.objetivo && ejercicio.tipo === "seleccionar_opcion" && (
           <p className="my-6 text-center font-titulo text-6xl font-black tracking-wide text-marca-900 sm:text-7xl">{ejercicio.objetivo}</p>
@@ -67,7 +83,7 @@ const Contenido = ({ ejercicios }) => {
           {fase === "reintentar" && (
             <div className="flex flex-col items-center gap-3">
               <p className="text-center text-2xl font-black text-marca-800">Casi. Te queda un intento más.</p>
-              <Boton onClick={() => setResultado(null)}><RotateCcw className="size-5" aria-hidden="true" /> Intentar otra vez</Boton>
+              <Boton onClick={reintentar} autoFocus><RotateCcw className="size-5" aria-hidden="true" /> Intentar otra vez</Boton>
             </div>
           )}
           {fase === "respondiendo" && ejercicio.pista && (
@@ -90,10 +106,10 @@ const Contenido = ({ ejercicios }) => {
         <Boton variante="secundario" disabled={indice === 0} onClick={() => ir(indice - 1)}>
           <ArrowLeft className="size-5" aria-hidden="true" /> Anterior
         </Boton>
-        <Boton variante="fantasma" onClick={() => ir(indice)} disabled={!resultado && !verPista}>
+        <Boton ref={repetir} variante="fantasma" onClick={() => ir(indice)} disabled={!resultado && !verPista}>
           <RotateCcw className="size-5" aria-hidden="true" /> Repetir
         </Boton>
-        <Boton disabled={indice === ejercicios.length - 1} onClick={() => ir(indice + 1)}>
+        <Boton ref={siguiente} disabled={ultimo} onClick={() => ir(indice + 1)}>
           Siguiente <ArrowRight className="size-5" aria-hidden="true" />
         </Boton>
       </div>

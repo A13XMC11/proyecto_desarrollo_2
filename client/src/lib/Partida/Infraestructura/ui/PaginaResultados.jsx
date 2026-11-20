@@ -101,7 +101,8 @@ export const PaginaResultados = () => {
           {porEstudiante.length > 0 && (
             <section className="mb-8" aria-labelledby="titulo-por-estudiante">
               <h2 id="titulo-por-estudiante" className="mb-3 text-lg font-extrabold">Por estudiante</h2>
-              <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
+              {/* Enfocable: en pantallas angostas la tabla se desplaza y con teclado también debe poder hacerlo */}
+              <div tabIndex={0} role="region" aria-labelledby="titulo-por-estudiante" className="overflow-x-auto rounded-2xl border border-borde bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-500">
                 <table className="w-full min-w-[36rem] text-left text-sm">
                   <Encabezados columnas={["Estudiante", "Partidas", "Primer intento", "Sin pista", "Completados"]} />
                   <tbody className="divide-y divide-borde">
@@ -125,8 +126,8 @@ export const PaginaResultados = () => {
             </section>
           )}
 
-          <h2 className="mb-3 text-lg font-extrabold">Partidas</h2>
-          <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
+          <h2 id="titulo-partidas" className="mb-3 text-lg font-extrabold">Partidas</h2>
+          <div tabIndex={0} role="region" aria-labelledby="titulo-partidas" className="overflow-x-auto rounded-2xl border border-borde bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-500">
             <table className="w-full min-w-[44rem] text-left text-sm">
               <Encabezados columnas={["Actividad", "Estudiante", "Fecha", "Primer intento", "Completados", "Pistas", "Estado"]} />
               <tbody className="divide-y divide-borde">
