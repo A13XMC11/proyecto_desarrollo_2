@@ -42,4 +42,13 @@ async function disconnect() {
   }
 }
 
-module.exports = { connection, disconnect };
+// Cliente nativo de la conexión de Mongoose, cuando esté conectada. Lo usa el almacén de sesiones para no
+// abrir una segunda conexión. Si aún no se conectó (buildApp() se crea antes), espera al evento.
+function obtenerClienteMongo() {
+  if (mongoose.connection.readyState === 1) return Promise.resolve(mongoose.connection.getClient());
+  return new Promise((resolver) => {
+    mongoose.connection.once("connected", () => resolver(mongoose.connection.getClient()));
+  });
+}
+
+module.exports = { connection, disconnect, obtenerClienteMongo };

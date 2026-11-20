@@ -40,7 +40,17 @@ Regla de dependencias: `Dominio` solo importa `Dominio` (y `validator`); `Aplica
 
 ## API (CRUD en todos los módulos)
 
-Hasta que exista la sesión, el docente se identifica con la cabecera `x-docente-id` (excepto `POST /api/docentes` y `GET /api/canales`, que son públicos).
+El docente se identifica con su **sesión**: una cookie `letritas.sid` (HttpOnly, SameSite=Lax y Secure en producción) guardada en MongoDB, en la colección `sesiones`. La cabecera `x-docente-id` ya no se acepta. Son públicos `POST /api/docentes` (registro, que abre la sesión), `POST /api/docentes/sesion` (entrar) y `GET /api/canales`.
+
+| Sesión | Qué hace |
+|---|---|
+| `POST /api/docentes/sesion` `{ correo, contrasena }` | Entra. Regenera el id de sesión y devuelve el token CSRF en la cabecera `X-CSRF-Token`. Con credenciales erróneas responde 401 `CREDENCIALES_INVALIDAS`, igual si el correo no existe. |
+| `GET /api/docentes/sesion` | Devuelve el docente actual y vuelve a entregar `X-CSRF-Token`. El cliente lo usa al recargar la página. |
+| `DELETE /api/docentes/sesion` | Sale: borra la sesión del servidor, así que la misma cookie deja de servir. |
+
+- **CSRF:** `POST`, `PUT` y `DELETE` sobre rutas privadas exigen la cabecera `X-CSRF-Token` con el token de la sesión. Sin él responden 403 `CSRF_INVALIDO`.
+- **Expiración:** la sesión caduca a las **4 h sin actividad** o a las **12 h** desde que se entró (401 `SESION_EXPIRADA`).
+- **Postman:** Postman guarda la cookie solo. Después de entrar, copia la cabecera de respuesta `X-CSRF-Token` en una variable y envíala en las peticiones que cambian datos. Por ejemplo, en *Tests* de la petición de entrada: `pm.collectionVariables.set("csrf", pm.response.headers.get("X-CSRF-Token"))`, y en las demás la cabecera `X-CSRF-Token: {{csrf}}`.
 Cada docente solo ve y modifica sus propios datos. No hay borrado físico salvo en docentes: "eliminar" archiva, descarta, cancela o abandona según el recurso.
 
 | Recurso | Rutas | `DELETE` hace |
