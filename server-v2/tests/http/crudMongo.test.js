@@ -385,7 +385,7 @@ describe("CRUD HTTP sobre MongoDB", () => {
     await llamar(`/api/partidas/${a.id}/finalizar`, { metodo: "POST", docente: esc.docente });
 
     // Versión 2: se edita la consigna del primer ejercicio y se aprueba
-    const editados = ejercicios(5).map((e) => (e.id === "e1" ? { ...e, consigna: "Mira la abeja y elige su primera vocal" } : e));
+    const editados = ejercicios(5).map((e) => (e.id === "e1" ? { ...e, consigna: "Mira la imagen y elige su primera vocal" } : e));
     const v2 = (await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 5, ejercicios: editados } })).cuerpo;
     assert.equal(v2.numero, 2);
     assert.equal((await llamar(`${rutaV}/${v2.id}/aprobar`, { metodo: "POST", docente: esc.docente })).status, 200);
@@ -402,7 +402,7 @@ describe("CRUD HTTP sobre MongoDB", () => {
     // Una partida nueva usa el contenido actualizado
     const b = (await llamar("/api/partidas", { metodo: "POST", docente: esc.docente, cuerpo: { estudianteId: esc.estudiante, juegoId: juego } })).cuerpo;
     assert.equal(b.versionId, v2.id);
-    assert.equal((await llamar(`/api/partidas/${b.id}/jugable`, { docente: esc.docente })).cuerpo.ejercicios[0].consigna, "Mira la abeja y elige su primera vocal");
+    assert.equal((await llamar(`/api/partidas/${b.id}/jugable`, { docente: esc.docente })).cuerpo.ejercicios[0].consigna, "Mira la imagen y elige su primera vocal");
 
     // Biblioteca: búsqueda y filtros por curso, estudiante, habilidad y estado
     const otro = (await crearJuego(esc, { titulo: "Sílabas para Luis", habilidad: "palabras_silabas", estudianteId: esc.estudiante })).cuerpo.id;
