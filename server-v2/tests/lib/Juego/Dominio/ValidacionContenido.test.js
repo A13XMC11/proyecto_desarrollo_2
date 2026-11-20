@@ -107,6 +107,18 @@ describe("VersionJuego.validarContenido", () => {
     assert.throws(() => versionVocales(incoherente).validarContenido(catalogo), /vocal/i);
   });
 
+  it("el objetivo que ve el niño en vocales debe ser la palabra, no la respuesta", () => {
+    const conObjetivo = (objetivo) => {
+      const lista = cincoVocales();
+      lista[0] = ejVocal("e1", "oso", "o", { objetivo });
+      return versionVocales(lista);
+    };
+    assert.doesNotThrow(() => conObjetivo("oso").validarContenido(catalogo));
+    assert.doesNotThrow(() => conObjetivo("OSO").validarContenido(catalogo), "sin distinguir mayúsculas");
+    assert.throws(() => conObjetivo("o").validarContenido(catalogo), /objetivo debe ser la palabra oso/);
+    assert.throws(() => conObjetivo("gato").validarContenido(catalogo), EntradaInvalida);
+  });
+
   it("las sílabas deben reconstruir exactamente la palabra del catálogo", () => {
     const mal = cincoSilabas();
     mal[0] = ejSilabas("e1", "gato", ["ga", "te"]);

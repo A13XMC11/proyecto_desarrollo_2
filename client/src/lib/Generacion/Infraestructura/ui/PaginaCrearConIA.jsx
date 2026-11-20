@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { GraduationCap, Info, Sparkles, X } from "lucide-react";
 import { AreaTexto, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector, Tarjeta } from "../../../../Infraestructura/ui/componentes";
@@ -6,13 +6,19 @@ import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { nuevoIdOperacion } from "../../../../Infraestructura/http/clienteHttp";
 import { useConsulta } from "../../../../Infraestructura/http/useConsulta";
 import { useCursos, useEstudiantes } from "../../../Aula/Aplicacion/useAula";
-import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, TEMATICAS, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
+import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, MOTIVOS_GENERACION, TEMATICAS, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
 import { GeneracionApiHttp } from "../GeneracionApiHttp";
 
-const LIMITE_DIARIO = 3;
 const MAX_INSTRUCCION = 500;
+// Mientras haya una solicitud en cola o generándose, la lista se consulta sola cada pocos segundos
+const INTERVALO_SEGUIMIENTO_MS = 3000;
+
+const esActiva = (g) => g.estado === "pendiente" || g.estado === "procesando";
+const motivoDe = (g) => (g.estado === "fallida" ? MOTIVOS_GENERACION[g.errorCodigo] : g.estado === "interrumpida" ? MOTIVOS_GENERACION.interrumpida : null);
 
 const Cupo = ({ cuotas }) => {
+  // El límite lo fija el servidor; desactivar un botón no bastaría para aplicarlo
+  const LIMITE_DIARIO = cuotas?.limiteDiario ?? 3;
   const usadas = cuotas ? Math.round((cuotas.diaria?.consumido || 0) + (cuotas.diaria?.reservado || 0)) : null;
   const libres = usadas === null ? null : Math.max(0, LIMITE_DIARIO - usadas);
   return (
@@ -50,6 +56,19 @@ export const PaginaCrearConIA = () => {
   // Una clave por solicitud: si el envío se repite (doble clic, red lenta), el servidor devuelve la misma
   const clave = useRef(nuevoIdOperacion());
 
+  const hayActivas = (generaciones.datos || []).some(esActiva);
+  const recargarGeneraciones = generaciones.recargar;
+  const recargarCuotas = cuotas.recargar;
+  useEffect(() => {
+    if (!hayActivas) return undefined;
+    const temporizador = setInterval(recargarGeneraciones, INTERVALO_SEGUIMIENTO_MS);
+    return () => {
+      clearInterval(temporizador);
+      // Al terminar la última, el cupo cambió (se consumió o se devolvió)
+      recargarCuotas();
+    };
+  }, [hayActivas, recargarGeneraciones, recargarCuotas]);
+
   const poner = (campo) => (e) => setDatos((d) => ({ ...d, [campo]: e.target.value, ...(campo === "cursoId" && { estudianteId: "" }) }));
 
   const enviar = async (e) => {
@@ -68,7 +87,7 @@ export const PaginaCrearConIA = () => {
       });
       clave.current = nuevoIdOperacion();
       setDatos((d) => ({ ...d, instruccion: "" }));
-      avisar("Solicitud enviada. Te avisamos aquí cuando esté lista para revisar.");
+      avisar("Solicitud enviada. Aparecerá aquí abajo lista para revisar en unos segundos.");
       generaciones.recargar();
       cuotas.recargar();
     } catch (err) {
@@ -145,10 +164,14 @@ export const PaginaCrearConIA = () => {
           <Cupo cuotas={cuotas.datos} />
           <div className="flex gap-3 rounded-2xl bg-marca-50 p-4 text-sm text-marca-900 ring-1 ring-marca-100">
             <Info className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-            <p>
-              La conexión con la IA está en preparación: por ahora tu solicitud queda en cola. Mientras tanto puedes{" "}
-              <Link to="/panel/actividades/nueva" className="font-medium underline underline-offset-2">crear la actividad a mano</Link>.
-            </p>
+            {cuotas.datos && !cuotas.datos.generacionHabilitada ? (
+              <p>
+                La generación con IA está desactivada por ahora. Puedes{" "}
+                <Link to="/panel/actividades/nueva" className="font-medium underline underline-offset-2">crear la actividad a mano</Link>.
+              </p>
+            ) : (
+              <p>Recibirás un borrador: revísalo y apruébalo antes de usarlo en clase. Solo se usan palabras del catálogo revisado y nunca se envían datos de tus estudiantes.</p>
+            )}
           </div>
         </div>
       </div>
@@ -164,7 +187,8 @@ export const PaginaCrearConIA = () => {
           <ul className="grid gap-2">
             {lista.map((g) => {
               const estado = ESTADOS_GENERACION[g.estado] || ESTADOS_GENERACION.pendiente;
-              const activa = g.estado === "pendiente" || g.estado === "procesando";
+              const activa = esActiva(g);
+              const motivo = motivoDe(g);
               const p = g.parametros || {};
               return (
                 <li key={g.id} className="flex flex-col gap-3 rounded-2xl border border-borde bg-white p-4 sm:flex-row sm:items-center">
@@ -176,6 +200,7 @@ export const PaginaCrearConIA = () => {
                       {new Date(g.creadaEn).toLocaleString("es-EC", { dateStyle: "medium", timeStyle: "short" })}
                       {p.instruccion && ` · "${p.instruccion}"`}
                     </p>
+                    {motivo && <p className="mt-1 text-sm text-tenue">{motivo}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <Insignia tono={estado.tono}>{estado.texto}</Insignia>

@@ -62,6 +62,10 @@ function validarSeleccion(ejercicio, catalogo, tematica, donde) {
   if (normalizar(correcta.texto) !== vocal) {
     throw new EntradaInvalida(`${donde}: la respuesta correcta no es la vocal inicial de la palabra`);
   }
+  // El modo aula muestra el objetivo en grande: debe ser la palabra, no la vocal ni otro texto
+  if (ejercicio.objetivo && normalizar(ejercicio.objetivo) !== normalizar(recurso.palabra)) {
+    throw new EntradaInvalida(`${donde}: el objetivo debe ser la palabra ${recurso.palabra}`);
+  }
   return { respuesta: vocal, reveladores: [recurso.palabra, `vocal ${vocal}`] };
 }
 

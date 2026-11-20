@@ -58,7 +58,24 @@ Cada docente solo ve y modifica sus propios datos. No hay borrado físico salvo 
 
 Reglas que aplican los casos de uso: el servidor evalúa los intentos (el cliente solo envía la elección), una partida solo se inicia sobre un juego con versión aprobada, un solo borrador de versión por juego,
 el curso/estudiante de un juego o partida deben ser del docente (se comprueba en PostgreSQL antes de escribir en MongoDB) y las solicitudes de generación son idempotentes por clave.
-Pendiente conocido (revisión de código): cancelar una generación con reserva de cuota aún no la libera y las solicitudes activas no tienen tope; ambos dependen del flujo de generación. La llamada al proveedor de IA y el control de cupos de la generación quedan para el sprint de generación; hoy `POST /api/generaciones` registra la solicitud en estado `pendiente`.
+## Generación de actividades (sprint 4)
+
+`POST /api/generaciones` sigue el flujo técnico del plan (§13):
+
+1. Comprueba la propiedad del curso o del estudiante, valida los parámetros y aplica la idempotencia por `Idempotency-Key`.
+2. Exige `AI_ENABLED=true`. Si no, responde 429 `GENERACION_DESHABILITADA`.
+3. Admite una sola generación activa por docente (429 `GENERACION_EN_CURSO`).
+4. Reserva cupo de forma **atómica** en dos contadores: el diario del docente, según el día de `ZONA_HORARIA` (429 `CUPO_DIARIO_AGOTADO`), y el global del mes (429 `CUPO_GLOBAL_AGOTADO`).
+5. Responde enseguida con la generación `pendiente` y la procesa en segundo plano (`ProcesarGeneracion`): llama al proveedor con tiempo límite, valida el contenido con la misma regla pedagógica de `VersionJuego` y guarda el juego (`origen: "ia"`) con su versión en **borrador**.
+6. La generación queda `completada`, `fallida` (`CONTENIDO_INVALIDO`, `PROVEEDOR_ERROR`…) o `interrumpida` (tiempo agotado). El docente sigue el estado con `GET /api/generaciones/:id` y aprueba el borrador desde la biblioteca.
+
+Reglas del cupo:
+
+- La reserva se **liquida una sola vez**. Se consume si se llamó al proveedor y se devuelve si no llegó a llamarse (por ejemplo, al cancelar una solicitud `pendiente`).
+- `ConciliarGeneraciones` se ejecuta al arrancar el servidor (`server.js`) y al listar, consultar o pedir generaciones. Completa las generaciones cuyo juego ya existe y marca `interrumpida` las vencidas, sin reintentar la llamada.
+- Si el docente cancela mientras se genera, el borrador que llega después se archiva.
+
+**Proveedor:** por ahora `GeneradorContenidoFalso` arma ejercicios válidos desde el catálogo, sin costo. El adaptador de la API de Claude (`GeneradorContenidoIA`) se conecta al pasar a producción y solo cambia `crearGenerador()` en `Generacion/Infraestructura/http/index.js`. Las variables están en `.env.example`.
 
 ## Cómo arrancar
 

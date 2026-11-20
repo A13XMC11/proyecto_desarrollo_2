@@ -4,6 +4,10 @@ const { pruebasConBase } = require("../Infraestructura/database/baseDePruebas");
 const { conServidor, registrarDocente } = require("./cliente");
 const { crearAsegurarCanales } = require("../../src/lib/Canal/Infraestructura/http");
 
+// La generación se habilita con el generador falso (sin costo) antes de que conServidor() construya la app
+process.env.AI_ENABLED = "true";
+process.env.GENERADOR_FALSO_DEMORA_MS = "0";
+
 const prueba = pruebasConBase("crudSql", { sql: true, mongo: true });
 const llamar = conServidor();
 const CURSO = { grado: "1.º EGB", paralelo: "a", anioLectivo: "2026-2027" };
@@ -112,7 +116,7 @@ describe("CRUD HTTP sobre PostgreSQL", () => {
     assert.equal((await llamar(`/api/estudiantes?cursoId=${curso}&archivado=false`, { docente })).cuerpo.length, 0);
   });
 
-  prueba("generaciones: solicitar (idempotente), listar, obtener y cancelar; cuotas de solo lectura", async () => {
+  prueba("generaciones: solicitar (idempotente), procesar con el generador falso, listar, obtener y cancelar; cuotas de solo lectura", async () => {
     await crearAsegurarCanales().ejecutar();
     const docente = await registrarDocente(llamar);
     const ajeno = await registrarDocente(llamar);
@@ -124,6 +128,7 @@ describe("CRUD HTTP sobre PostgreSQL", () => {
     const creada = await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: datos, cabeceras: clave });
     assert.equal(creada.status, 201);
     assert.equal(creada.cuerpo.estado, "pendiente");
+    assert.ok(creada.cuerpo.reserva, "el cupo se reserva antes de llamar al proveedor");
     assert.equal(creada.cuerpo.mecanica, undefined, "la mecánica se deduce, no se envía ni se guarda");
     const repetida = await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: datos, cabeceras: clave });
     assert.equal(repetida.status, 200, "misma clave: devuelve la original");
@@ -134,22 +139,40 @@ describe("CRUD HTTP sobre PostgreSQL", () => {
     assert.equal((await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: { ...datos, cantidad: 7 }, cabeceras: { "idempotency-key": "clave-de-prueba-0003" } })).status, 400);
     assert.equal((await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: { ...datos, canal: "otro" }, cabeceras: { "idempotency-key": "clave-de-prueba-0004" } })).status, 400);
 
+    // El proceso corre en segundo plano: se consulta el estado por el id
+    let generacion;
+    for (let i = 0; i < 50; i += 1) {
+      generacion = (await llamar(`/api/generaciones/${creada.cuerpo.id}`, { docente })).cuerpo;
+      if (generacion.estado !== "pendiente" && generacion.estado !== "procesando") break;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    assert.equal(generacion.estado, "completada");
+    assert.equal(generacion.proveedor, "falso");
+    assert.equal(generacion.reserva.liberada, true, "la reserva quedó liquidada");
+
+    const juego = await llamar(`/api/juegos/${generacion.juegoId}`, { docente });
+    assert.equal(juego.status, 200, "el borrador está en la biblioteca del docente");
+    assert.equal(juego.cuerpo.origen, "ia");
+    assert.equal(juego.cuerpo.estado, "borrador", "falta la aprobación del docente");
+    const versiones = (await llamar(`/api/juegos/${generacion.juegoId}/versiones`, { docente })).cuerpo;
+    assert.equal(versiones.length, 1);
+    assert.equal(versiones[0].estado, "borrador");
+    assert.equal((await llamar(`/api/juegos/${generacion.juegoId}`, { docente: ajeno })).status, 404);
+
     assert.equal((await llamar("/api/generaciones", { docente })).cuerpo.length, 1);
-    assert.equal((await llamar("/api/generaciones?estado=completada", { docente })).cuerpo.length, 0);
+    assert.equal((await llamar("/api/generaciones?estado=completada", { docente })).cuerpo.length, 1);
     assert.equal((await llamar("/api/generaciones", { docente: ajeno })).cuerpo.length, 0);
-    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { docente })).cuerpo.parametros.habilidad, "vocales");
+    assert.equal(generacion.parametros.habilidad, "vocales");
     assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { docente: ajeno })).status, 404);
 
     assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente: ajeno })).status, 404);
-    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente })).status, 204);
-    const cancelada = (await llamar(`/api/generaciones/${creada.cuerpo.id}`, { docente })).cuerpo;
-    assert.equal(cancelada.estado, "fallida");
-    assert.equal(cancelada.errorCodigo, "CANCELADA_POR_DOCENTE");
-    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente })).status, 409, "ya no está activa");
+    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente })).status, 409, "una completada ya no se cancela");
 
     const cuotas = await llamar("/api/cuotas", { docente });
     assert.equal(cuotas.status, 200);
-    assert.equal(cuotas.cuerpo.diaria, null);
+    assert.equal(cuotas.cuerpo.diaria.consumido, 1, "una generación completada consume una unidad del día");
+    assert.equal(cuotas.cuerpo.diaria.reservado, 0);
+    assert.equal(cuotas.cuerpo.limiteDiario, 3);
     assert.equal(cuotas.cuerpo.global, undefined, "el contador global no se expone a los docentes");
     assert.equal((await llamar("/api/cuotas?dia=mal", { docente })).status, 400);
     assert.equal((await llamar("/api/cuotas", { metodo: "POST", docente })).status, 404, "las cuotas no se modifican por HTTP");

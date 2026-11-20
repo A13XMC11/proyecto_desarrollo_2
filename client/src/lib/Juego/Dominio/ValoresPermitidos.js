@@ -28,7 +28,16 @@ export const ESTADOS_GENERACION = {
   procesando: { texto: "Generando", tono: "azul" },
   completada: { texto: "Lista para revisar", tono: "verde" },
   fallida: { texto: "No se pudo generar", tono: "rojo" },
-  interrumpida: { texto: "Cancelada", tono: "gris" }
+  interrumpida: { texto: "Interrumpida", tono: "gris" }
+};
+
+// Explicación para el docente según el código que guarda el servidor
+export const MOTIVOS_GENERACION = {
+  CANCELADA_POR_DOCENTE: "La cancelaste.",
+  CONTENIDO_INVALIDO: "La IA propuso ejercicios que no pasaron la revisión automática. Puedes pedirla de nuevo.",
+  PROVEEDOR_ERROR: "El servicio de IA no respondió bien. Inténtalo de nuevo en unos minutos.",
+  CATALOGO_INSUFICIENTE: "No hay suficientes palabras revisadas para esa temática.",
+  interrumpida: "Se cortó mientras se generaba. Puedes pedirla de nuevo."
 };
 
 export const AVATARES = ["gato", "ave", "tortuga", "pez", "conejo", "ardilla"];
