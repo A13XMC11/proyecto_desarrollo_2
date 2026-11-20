@@ -43,6 +43,45 @@ const VistaVersion = ({ version }) => (
   </ol>
 );
 
+const ESTADOS_VERSION = {
+  aprobada: { texto: "Aprobada", tono: "verde" },
+  borrador: { texto: "Borrador", tono: "ambar" },
+  descartada: { texto: "Descartada", tono: "gris" }
+};
+
+// Historial (S5-01): las versiones aprobadas nunca cambian; cada partida guarda la versión con la que se jugó
+const HistorialVersiones = ({ versiones, vigenteId, alVer }) => (
+  <section className="mt-10" aria-labelledby="titulo-historial">
+    <h2 id="titulo-historial" className="mb-1 text-lg font-extrabold">Historial de versiones</h2>
+    <p className="mb-3 text-sm text-tenue">Las partidas ya jugadas conservan la versión con la que se jugaron; las nuevas usan la vigente.</p>
+    <ul className="grid gap-2">
+      {versiones.map((v) => {
+        const estado = ESTADOS_VERSION[v.estado] || ESTADOS_VERSION.borrador;
+        const fecha = v.aprobadoEn || v.creadoEn;
+        return (
+          <li key={v.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-borde bg-white px-4 py-3">
+            <span className="font-extrabold">Versión {v.numero}</span>
+            <Insignia tono={estado.tono}>{estado.texto}</Insignia>
+            {v.id === vigenteId && <Insignia tono="azul">Vigente</Insignia>}
+            {fecha && (
+              <span className="text-sm text-tenue">
+                {v.aprobadoEn ? "aprobada el " : "creada el "}
+                {new Date(fecha).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" })}
+              </span>
+            )}
+            <span className="text-sm text-tenue">· {v.ejercicios.length} ejercicios</span>
+            {v.estado !== "borrador" && v.ejercicios.length > 0 && (
+              <Boton variante="fantasma" tamano="sm" className="ml-auto" onClick={() => alVer(v.ejercicios)}>
+                <Eye className="size-4" aria-hidden="true" /> Ver
+              </Boton>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  </section>
+);
+
 export const PaginaActividad = () => {
   const { id } = useParams();
   const avisar = useAvisos();
@@ -232,6 +271,8 @@ export const PaginaActividad = () => {
           {!archivado && versiones[0] && <Boton className="mt-4" cargando={ocupado === "nueva"} onClick={nuevaVersion}>Crear un borrador nuevo</Boton>}
         </Tarjeta>
       )}
+
+      {versiones.length > 1 && <HistorialVersiones versiones={versiones} vigenteId={juego.versionActualId} alVer={setPrevia} />}
 
       <VistaPrevia ejercicios={previa} alCerrar={() => setPrevia(null)} />
       <Confirmar

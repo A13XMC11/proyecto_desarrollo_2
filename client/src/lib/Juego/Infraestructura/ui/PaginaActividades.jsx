@@ -2,8 +2,10 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Library, Play, Plus, Search, BarChart3, Sparkles } from "lucide-react";
 import { Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector } from "../../../../Infraestructura/ui/componentes";
-import { useCursos } from "../../../Aula/Aplicacion/useAula";
-import { ESTADOS_JUEGO, HABILIDADES, nombreCurso, opcionesDe } from "../../Dominio/ValoresPermitidos";
+import { useCursos, useEstudiantes } from "../../../Aula/Aplicacion/useAula";
+import { ESTADOS_JUEGO, HABILIDADES, nombreCurso, nombreEstudiante, opcionesDe } from "../../Dominio/ValoresPermitidos";
+
+const CLAVES_FILTRO = ["cursoId", "estudianteId", "habilidad", "estado", "texto"];
 import { useJuegos } from "../../Aplicacion/useJuegos";
 
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "short" }) : "");
@@ -47,25 +49,29 @@ export const PaginaActividades = () => {
   const [texto, setTexto] = useState(parametros.get("texto") || "");
   const filtros = useMemo(() => {
     const f = {};
-    ["cursoId", "habilidad", "estado", "texto", "pagina"].forEach((k) => parametros.get(k) && (f[k] = parametros.get(k)));
+    [...CLAVES_FILTRO, "pagina"].forEach((k) => parametros.get(k) && (f[k] = parametros.get(k)));
     if (f.estado === "archivado") f.incluirArchivados = "true";
     f.limite = 12;
     return f;
   }, [parametros]);
   const juegos = useJuegos(filtros);
   const cursos = useCursos();
+  const cursoId = parametros.get("cursoId") || "";
+  // Los estudiantes se eligen dentro de un curso (actividades pensadas para un estudiante concreto)
+  const estudiantes = useEstudiantes({ cursoId });
 
   const cambiar = (clave, valor) => {
     const nuevos = new URLSearchParams(parametros);
     if (valor) nuevos.set(clave, valor);
     else nuevos.delete(clave);
     if (clave !== "pagina") nuevos.delete("pagina");
+    if (clave === "cursoId") nuevos.delete("estudianteId");
     setParametros(nuevos);
   };
 
   const { items = [], total = 0, pagina = 1, limite = 12 } = juegos.datos || {};
   const paginas = Math.max(1, Math.ceil(total / limite));
-  const hayFiltros = ["cursoId", "habilidad", "estado", "texto"].some((k) => parametros.get(k));
+  const hayFiltros = CLAVES_FILTRO.some((k) => parametros.get(k));
 
   return (
     <>
@@ -87,7 +93,7 @@ export const PaginaActividades = () => {
           e.preventDefault();
           cambiar("texto", texto.trim());
         }}
-        className="mb-6 grid gap-3 rounded-2xl border border-borde bg-white p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]"
+        className="mb-6 grid gap-3 rounded-2xl border border-borde bg-white p-4 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]"
       >
         <div>
           <label htmlFor="buscar" className="mb-1.5 block text-sm font-medium">Buscar</label>
@@ -96,7 +102,14 @@ export const PaginaActividades = () => {
             <input id="buscar" type="search" value={texto} onChange={(e) => setTexto(e.target.value)} onBlur={() => cambiar("texto", texto.trim())} placeholder="Título de la actividad" className="min-h-11 w-full rounded-xl border border-borde pl-10 pr-3 text-base focus:border-marca-500 focus:outline-none focus:ring-4 focus:ring-marca-500/15" />
           </div>
         </div>
-        <Selector etiqueta="Curso" value={parametros.get("cursoId") || ""} onChange={(e) => cambiar("cursoId", e.target.value)} opciones={[{ valor: "", texto: "Todos" }, ...(cursos.datos || []).map((c) => ({ valor: c.id, texto: nombreCurso(c) }))]} />
+        <Selector etiqueta="Curso" value={cursoId} onChange={(e) => cambiar("cursoId", e.target.value)} opciones={[{ valor: "", texto: "Todos" }, ...(cursos.datos || []).map((c) => ({ valor: c.id, texto: nombreCurso(c) }))]} />
+        <Selector
+          etiqueta="Estudiante"
+          value={parametros.get("estudianteId") || ""}
+          disabled={!cursoId}
+          onChange={(e) => cambiar("estudianteId", e.target.value)}
+          opciones={[{ valor: "", texto: cursoId ? "Todos" : "Elige un curso primero" }, ...(estudiantes.datos || []).map((e) => ({ valor: e.id, texto: nombreEstudiante(e) }))]}
+        />
         <Selector etiqueta="Habilidad" value={parametros.get("habilidad") || ""} onChange={(e) => cambiar("habilidad", e.target.value)} opciones={[{ valor: "", texto: "Todas" }, ...opcionesDe(HABILIDADES)]} />
         <Selector etiqueta="Estado" value={parametros.get("estado") || ""} onChange={(e) => cambiar("estado", e.target.value)} opciones={[{ valor: "", texto: "Activas" }, ...opcionesDe(ESTADOS_JUEGO)]} />
       </form>
