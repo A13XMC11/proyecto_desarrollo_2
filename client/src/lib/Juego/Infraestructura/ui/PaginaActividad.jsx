@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Archive, ArchiveRestore, ArrowLeft, BarChart3, CheckCircle2, FilePlus2, Play, Save, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, BarChart3, CheckCircle2, Eye, FilePlus2, Play, Save, Trash2 } from "lucide-react";
 import { Boton, BotonEnlace, Cargando, Insignia, MensajeError, Tarjeta } from "../../../../Infraestructura/ui/componentes";
 import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { Confirmar } from "../../../Aula/Infraestructura/ui/PaginaCursos";
@@ -9,6 +9,7 @@ import { aContrato, aFormulario, revisar } from "../../Dominio/Ejercicios";
 import { useJuego, useRecursos } from "../../Aplicacion/useJuegos";
 import { JuegoApiHttp } from "../JuegoApiHttp";
 import { EditorEjercicios } from "./EditorEjercicios";
+import { VistaPrevia } from "./VistaPrevia";
 
 // Vista de solo lectura de una versión aprobada (inmutable)
 const VistaVersion = ({ version }) => (
@@ -50,6 +51,7 @@ export const PaginaActividad = () => {
   const [errores, setErrores] = useState([]);
   const [ocupado, setOcupado] = useState(null);
   const [confirmar, setConfirmar] = useState(null);
+  const [previa, setPrevia] = useState(null); // ejercicios (contrato) que se están previsualizando
 
   const { juego, versiones = [] } = consulta.datos || {};
   const borrador = versiones.find((v) => v.estado === "borrador");
@@ -84,6 +86,23 @@ export const PaginaActividad = () => {
     const hay = encontrados.some((e) => Object.keys(e).length);
     if (hay) avisar("Hay ejercicios por corregir. Están marcados en rojo.", "error");
     return !hay;
+  };
+
+  // Previsualiza lo que hay en el editor, aunque aún no esté guardado
+  const previsualizar = () => {
+    if (!recursos.length) {
+      avisar("El catálogo de palabras todavía no cargó. Inténtalo de nuevo en un momento.", "error");
+      return;
+    }
+    if (!ejercicios.length) {
+      avisar("Agrega al menos un ejercicio para verlo.", "error");
+      return;
+    }
+    try {
+      setPrevia(aContrato(ejercicios, mecanica, recursos));
+    } catch (error) {
+      avisar(error.message, "error");
+    }
   };
 
   const guardar = conAccion("guardar", async () => {
@@ -182,6 +201,7 @@ export const PaginaActividad = () => {
             </div>
             <div className="flex flex-wrap gap-2">
               <Boton variante="fantasma" tamano="sm" onClick={() => setConfirmar("descartar")}><Trash2 className="size-4" aria-hidden="true" /> Descartar</Boton>
+              <Boton variante="secundario" tamano="sm" onClick={previsualizar}><Eye className="size-4" aria-hidden="true" /> Vista previa</Boton>
               <Boton variante="secundario" tamano="sm" cargando={ocupado === "guardar"} onClick={guardar}><Save className="size-4" aria-hidden="true" /> Guardar</Boton>
               <Boton tamano="sm" cargando={ocupado === "aprobar"} onClick={aprobar}><CheckCircle2 className="size-4" aria-hidden="true" /> Aprobar</Boton>
             </div>
@@ -193,11 +213,16 @@ export const PaginaActividad = () => {
         <section aria-labelledby="titulo-vigente">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 id="titulo-vigente" className="text-lg font-extrabold">Lo que verán tus estudiantes</h2>
-            {!archivado && (
-              <Boton variante="secundario" tamano="sm" cargando={ocupado === "nueva"} onClick={nuevaVersion}>
-                <FilePlus2 className="size-4" aria-hidden="true" /> Editar como versión nueva
+            <div className="flex flex-wrap gap-2">
+              <Boton variante="fantasma" tamano="sm" onClick={() => setPrevia(vigente.ejercicios)}>
+                <Eye className="size-4" aria-hidden="true" /> Probar como estudiante
               </Boton>
-            )}
+              {!archivado && (
+                <Boton variante="secundario" tamano="sm" cargando={ocupado === "nueva"} onClick={nuevaVersion}>
+                  <FilePlus2 className="size-4" aria-hidden="true" /> Editar como versión nueva
+                </Boton>
+              )}
+            </div>
           </div>
           <VistaVersion version={vigente} />
         </section>
@@ -208,6 +233,7 @@ export const PaginaActividad = () => {
         </Tarjeta>
       )}
 
+      <VistaPrevia ejercicios={previa} alCerrar={() => setPrevia(null)} />
       <Confirmar
         abierto={confirmar === "descartar"}
         titulo="¿Descartar este borrador?"
