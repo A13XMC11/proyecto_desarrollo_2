@@ -6,6 +6,8 @@ const NoAutenticado = require("../../../../src/lib/Compartido/Dominio/Errores/No
 const NoEncontrado = require("../../../../src/lib/Compartido/Dominio/Errores/NoEncontrado");
 const ConflictoDeEstado = require("../../../../src/lib/Compartido/Dominio/Errores/ConflictoDeEstado");
 const LimiteAlcanzado = require("../../../../src/lib/Compartido/Dominio/Errores/LimiteAlcanzado");
+const ServicioNoDisponible = require("../../../../src/lib/Compartido/Dominio/Errores/ServicioNoDisponible");
+const ErrorDelGenerador = require("../../../../src/lib/Compartido/Dominio/Errores/ErrorDelGenerador");
 const { textoPlano, enumerado, entero } = require("../../../../src/lib/Compartido/Dominio/Validaciones");
 const valores = require("../../../../src/lib/Compartido/Dominio/ValoresPermitidos");
 const reexportados = require("../../../../src/lib/Compartido/Dominio/ValoresPermitidos");
@@ -17,7 +19,9 @@ describe("Compartido: errores de dominio", () => {
       [NoAutenticado, "NO_AUTENTICADO"],
       [NoEncontrado, "NO_ENCONTRADO"],
       [ConflictoDeEstado, "CONFLICTO_DE_ESTADO"],
-      [LimiteAlcanzado, "LIMITE_ALCANZADO"]
+      [LimiteAlcanzado, "LIMITE_ALCANZADO"],
+      [ServicioNoDisponible, "SERVICIO_NO_DISPONIBLE"],
+      [ErrorDelGenerador, "GENERADOR_ERROR"]
     ];
     for (const [Clase, codigo] of casos) {
       const error = new Clase("mensaje");
@@ -27,6 +31,12 @@ describe("Compartido: errores de dominio", () => {
       assert.equal(error.message, "mensaje");
       assert.equal(error.name, Clase.name);
     }
+  });
+
+  it("cada error lleva el estado HTTP que le corresponde", () => {
+    assert.equal(new LimiteAlcanzado("x").statusCode, 429);
+    assert.equal(new ServicioNoDisponible("x").statusCode, 503);
+    assert.equal(new ErrorDelGenerador("x").statusCode, 502);
   });
 
   it("admite un codigo específico", () => {

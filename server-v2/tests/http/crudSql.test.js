@@ -121,13 +121,21 @@ describe("CRUD HTTP sobre PostgreSQL", () => {
     const datos = { cursoId: curso, estudianteId: estudiante, habilidad: "vocales", tematica: "animales", cantidad: 5, instruccion: "Animales de la granja" };
     const clave = { "idempotency-key": "clave-de-prueba-0001" };
 
-    const creada = await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: datos, cabeceras: clave });
-    assert.equal(creada.status, 201);
-    assert.equal(creada.cuerpo.estado, "pendiente");
-    assert.equal(creada.cuerpo.mecanica, undefined, "la mecánica se deduce, no se envía ni se guarda");
+    // Sin AI_ENABLED (el valor por defecto) la solicitud se registra y se rechaza sin tocar cupo
+    const rechazada = await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: datos, cabeceras: clave });
+    assert.equal(rechazada.status, 503);
+    assert.equal(rechazada.cuerpo.codigo, "GENERACION_DESHABILITADA");
+    const [creada] = (await llamar("/api/generaciones", { docente })).cuerpo;
+    assert.equal(creada.estado, "fallida");
+    assert.equal(creada.errorCodigo, "GENERACION_DESHABILITADA");
+    assert.equal(creada.reserva, undefined, "no se reservó cupo");
+    assert.equal(creada.mecanica, undefined, "la mecánica se deduce, no se envía ni se guarda");
     const repetida = await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: datos, cabeceras: clave });
     assert.equal(repetida.status, 200, "misma clave: devuelve la original");
-    assert.equal(repetida.cuerpo.id, creada.cuerpo.id);
+    assert.equal(repetida.cuerpo.id, creada.id);
+    const otraCarga = await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: { ...datos, tematica: "naturaleza" }, cabeceras: clave });
+    assert.equal(otraCarga.status, 409, "la misma clave con otros datos es un conflicto");
+    assert.equal(otraCarga.cuerpo.codigo, "CLAVE_REUTILIZADA");
 
     assert.equal((await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: datos })).status, 400, "falta la clave de idempotencia");
     assert.equal((await llamar("/api/generaciones", { metodo: "POST", docente: ajeno, cuerpo: datos, cabeceras: { "idempotency-key": "clave-de-prueba-0002" } })).status, 404, "curso ajeno");
@@ -137,15 +145,11 @@ describe("CRUD HTTP sobre PostgreSQL", () => {
     assert.equal((await llamar("/api/generaciones", { docente })).cuerpo.length, 1);
     assert.equal((await llamar("/api/generaciones?estado=completada", { docente })).cuerpo.length, 0);
     assert.equal((await llamar("/api/generaciones", { docente: ajeno })).cuerpo.length, 0);
-    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { docente })).cuerpo.parametros.habilidad, "vocales");
-    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { docente: ajeno })).status, 404);
+    assert.equal((await llamar(`/api/generaciones/${creada.id}`, { docente })).cuerpo.parametros.habilidad, "vocales");
+    assert.equal((await llamar(`/api/generaciones/${creada.id}`, { docente: ajeno })).status, 404);
 
-    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente: ajeno })).status, 404);
-    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente })).status, 204);
-    const cancelada = (await llamar(`/api/generaciones/${creada.cuerpo.id}`, { docente })).cuerpo;
-    assert.equal(cancelada.estado, "fallida");
-    assert.equal(cancelada.errorCodigo, "CANCELADA_POR_DOCENTE");
-    assert.equal((await llamar(`/api/generaciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente })).status, 409, "ya no está activa");
+    assert.equal((await llamar(`/api/generaciones/${creada.id}`, { metodo: "DELETE", docente: ajeno })).status, 404);
+    assert.equal((await llamar(`/api/generaciones/${creada.id}`, { metodo: "DELETE", docente })).status, 409, "ya no está activa");
 
     const cuotas = await llamar("/api/cuotas", { docente });
     assert.equal(cuotas.status, 200);

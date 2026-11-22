@@ -58,7 +58,7 @@ Cada docente solo ve y modifica sus propios datos. No hay borrado físico salvo 
 
 Reglas que aplican los casos de uso: el servidor evalúa los intentos (el cliente solo envía la elección), una partida solo se inicia sobre un juego con versión aprobada, un solo borrador de versión por juego,
 el curso/estudiante de un juego o partida deben ser del docente (se comprueba en PostgreSQL antes de escribir en MongoDB) y las solicitudes de generación son idempotentes por clave.
-Pendiente conocido (revisión de código): cancelar una generación con reserva de cuota aún no la libera y las solicitudes activas no tienen tope; ambos dependen del flujo de generación. La llamada al proveedor de IA y el control de cupos de la generación quedan para el sprint de generación; hoy `POST /api/generaciones` registra la solicitud en estado `pendiente`.
+Generación con IA (Sprint 4): `POST /api/generaciones` reserva cupo de forma atómica, llama al generador con tiempo límite, valida el contenido contra el catálogo y guarda un borrador de origen `ia`; las interrumpidas se concilian sin reintentar. Está **apagada por defecto** (`AI_ENABLED=false`, responde 503 `GENERACION_DESHABILITADA`). `AI_PROVEEDOR=falso` usa fixtures sin costo; `gemini` hace una llamada real y exige `GEMINI_API_KEY`, `GEMINI_MODELO` y `AI_MAX_TOKENS_SALIDA`. Prompt, esquema, ejemplos, medición (`npm run medir:generacion`) y la lista de autorización para habilitarla: [`../docs/generacion-ia.md`](../docs/generacion-ia.md).
 
 ## Cómo arrancar
 

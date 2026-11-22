@@ -115,6 +115,15 @@ class GeneracionRepositorySequelize {
     return filas.length ? this.recargar(id) : null;
   }
 
+  // Deshace la compuerta cuando el movimiento de los contadores falló: la reserva vuelve a figurar como
+  // pendiente de conciliar en vez de darse por resuelta sin haberlo estado.
+  async reabrirReserva(id, docenteId) {
+    if (!esUuid(id) || !esUuid(docenteId)) return null;
+    if (!(await GeneracionModel.findOne({ where: { id, docenteId } }))) return null;
+    await ReservaModel.update({ liberada: false }, { where: { generacionId: id } });
+    return this.recargar(id);
+  }
+
   async marcarProcesando(id, docenteId) {
     return this.transicion(id, docenteId, ["pendiente"], { estado: "procesando" });
   }
@@ -140,6 +149,18 @@ class GeneracionRepositorySequelize {
     });
   }
 
+  // Solo desde "pendiente": la generación aún no llamó al proveedor. Que esta transición gane es lo que
+  // autoriza a devolver la reserva; si otra petición ya la pasó a "procesando", devuelve null.
+  async marcarFallidaSiPendiente(id, docenteId, errorCodigo) {
+    return this.transicion(id, docenteId, ["pendiente"], { estado: "fallida", errorCodigo, finalizadaEn: new Date() });
+  }
+
+  async marcarInterrumpidaSiPendiente(id, docenteId, uso = {}) {
+    return this.transicion(id, docenteId, ["pendiente"], {
+      ...soloUso(uso), estado: "interrumpida", finalizadaEn: new Date()
+    });
+  }
+
   async marcarInterrumpida(id, docenteId, uso = {}) {
     return this.transicion(id, docenteId, ESTADOS_GENERACION_ACTIVOS, {
       usoDesconocido: true,
@@ -154,15 +175,31 @@ class GeneracionRepositorySequelize {
     return GeneracionModel.count({ where: { docenteId, estado: { [Op.in]: ESTADOS_GENERACION_ACTIVOS } } });
   }
 
-  // Activas creadas antes de la fecha dada (de cualquier docente, para la conciliación).
-  async findVencidas(antesDe) {
-    const limite = antesDe instanceof Date ? antesDe : new Date(antesDe);
-    if (Number.isNaN(limite.getTime())) return [];
+  // Activas del docente, de la más antigua a la más reciente: decide cuál puede llamar al proveedor
+  async findActivas(docenteId) {
+    if (!esUuid(docenteId)) return [];
     const filas = await GeneracionModel.findAll({
-      where: { estado: { [Op.in]: ESTADOS_GENERACION_ACTIVOS }, creadaEn: { [Op.lt]: limite } },
+      where: { docenteId, estado: { [Op.in]: ESTADOS_GENERACION_ACTIVOS } },
+      include: [conReserva],
+      order: [["creadaEn", "ASC"], ["id", "ASC"]]
+    });
+    return filas.map((fila) => this.aEntidad(plano(fila)));
+  }
+
+  // Activas creadas antes de la fecha dada, de un docente o de todos. El filtro va en la consulta: si se
+  // aplicara después del límite, las de un docente podrían quedar fuera de un lote lleno de otros.
+  async findVencidas(antesDe, { docenteId, limite = LIMITE_VENCIDAS } = {}) {
+    const fecha = antesDe instanceof Date ? antesDe : new Date(antesDe);
+    if (Number.isNaN(fecha.getTime())) return [];
+    if (docenteId !== undefined && !esUuid(docenteId)) return [];
+    const filas = await GeneracionModel.findAll({
+      where: {
+        estado: { [Op.in]: ESTADOS_GENERACION_ACTIVOS }, creadaEn: { [Op.lt]: fecha },
+        ...(docenteId && { docenteId })
+      },
       include: [conReserva],
       order: [["creadaEn", "ASC"], ["id", "ASC"]],
-      limit: LIMITE_VENCIDAS
+      limit: limite
     });
     return filas.map((fila) => this.aEntidad(plano(fila)));
   }

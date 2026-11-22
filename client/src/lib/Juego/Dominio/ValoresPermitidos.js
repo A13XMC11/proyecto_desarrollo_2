@@ -31,6 +31,23 @@ export const ESTADOS_GENERACION = {
   interrumpida: { texto: "Cancelada", tono: "gris" }
 };
 
+// Por qué terminó mal una generación (errorCodigo del servidor), en palabras para el docente
+export const MENSAJES_ERROR_GENERACION = {
+  GENERACION_DESHABILITADA: "La creación con IA todavía no está habilitada.",
+  GENERACION_EN_CURSO: "Ya tenías otra actividad generándose.",
+  CUPO_DIARIO_AGOTADO: "Ya usaste todas las actividades con IA de hoy.",
+  PRESUPUESTO_AGOTADO: "La creación con IA no estaba disponible en ese momento.",
+  CONTENIDO_INVALIDO: "La IA propuso algo que no cumple las reglas de la actividad. Prueba de nuevo, quizá pidiendo algo un poco distinto.",
+  GENERADOR_TIEMPO_AGOTADO: "La IA tardó demasiado en responder. Prueba de nuevo en unos minutos.",
+  GENERADOR_ERROR: "No se pudo conectar con la IA. Prueba de nuevo en unos minutos.",
+  GENERADOR_BLOQUEADO: "La IA no pudo atender esa petición. Prueba con una instrucción distinta.",
+  GENERADOR_RESPUESTA_VACIA: "La IA no devolvió una actividad. Prueba de nuevo.",
+  GENERADOR_RESPUESTA_INCOMPLETA: "La IA no alcanzó a terminar la actividad. Prueba de nuevo.",
+  GENERADOR_RESPUESTA_INVALIDA: "La IA respondió algo que no se pudo usar. Prueba de nuevo.",
+  ERROR_AL_GUARDAR: "La actividad se generó pero no se pudo guardar. Prueba de nuevo.",
+  CANCELADA_POR_DOCENTE: "La cancelaste."
+};
+
 export const AVATARES = ["gato", "ave", "tortuga", "pez", "conejo", "ardilla"];
 
 export const opcionesDe = (objeto) => Object.entries(objeto).map(([valor, info]) => ({

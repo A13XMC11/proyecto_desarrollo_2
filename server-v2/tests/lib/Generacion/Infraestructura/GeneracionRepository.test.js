@@ -97,6 +97,62 @@ describe("GeneracionRepositorySequelize", () => {
     assert.equal(await repo.contarActivas(d), 0);
   });
 
+  prueba("findActivas lista las activas del docente, de la más antigua a la más reciente", async () => {
+    const esc = await crearEscenario();
+    const otro = await crearEscenario();
+    const a = (await repo.save(gen(esc))).generacion;
+    const b = (await repo.save(gen(esc))).generacion;
+    const c = (await repo.save(gen(esc))).generacion;
+    await repo.save(gen(otro));
+    await repo.marcarProcesando(b.id, esc.docenteId);
+    await repo.marcarFallida(c.id, esc.docenteId, "X");
+
+    assert.deepEqual((await repo.findActivas(esc.docenteId)).map((g) => g.id), [a.id, b.id], "sin las cerradas ni las de otro docente");
+    assert.deepEqual(await repo.findActivas(uuid()), []);
+    assert.deepEqual(await repo.findActivas("no-es-id"), []);
+  });
+
+  prueba("las transiciones 'si pendiente' solo ganan desde pendiente, y reabrirReserva deshace la compuerta", async () => {
+    const esc = await crearEscenario();
+    const d = esc.docenteId;
+    const a = (await repo.save(gen(esc))).generacion;
+    const b = (await repo.save(gen(esc))).generacion;
+    await repo.marcarProcesando(b.id, d);
+
+    assert.equal((await repo.marcarFallidaSiPendiente(a.id, d, "CANCELADA_POR_DOCENTE")).estado, "fallida");
+    assert.equal(await repo.marcarFallidaSiPendiente(a.id, d, "X"), null, "ya no está pendiente");
+    assert.equal(await repo.marcarFallidaSiPendiente(b.id, d, "X"), null, "procesando: no gana");
+    assert.equal(await repo.marcarInterrumpidaSiPendiente(b.id, d), null);
+    assert.equal((await repo.findById(b.id, d)).estado, "procesando", "no se tocó");
+
+    const c = (await repo.save(gen(esc))).generacion;
+    const interrumpida = await repo.marcarInterrumpidaSiPendiente(c.id, d, { usoDesconocido: false });
+    assert.deepEqual([interrumpida.estado, interrumpida.usoDesconocido], ["interrumpida", false]);
+
+    const diaria = await cuotas.reservar({ docenteId: d, periodo: "2026-01-01", cantidad: 1, limite: 5 });
+    const global = await cuotas.reservar({ periodo: "2026-01", cantidad: 1, limite: 1e6 });
+    await repo.registrarReserva(b.id, d, { cuotaDiariaId: diaria.cuota.id, cupoDiario: 1, cuotaGlobalId: global.cuota.id, montoGlobal: 1 });
+    assert.ok(await repo.marcarReservaLiberada(b.id, d));
+    assert.equal((await repo.findById(b.id, d)).reserva.liberada, true);
+    assert.equal((await repo.reabrirReserva(b.id, d)).reserva.liberada, false);
+    assert.equal(await repo.reabrirReserva(b.id, uuid()), null);
+  });
+
+  prueba("findVencidas filtra por docente en la consulta: un lote lleno de otros no lo deja fuera", async () => {
+    const mio = await crearEscenario();
+    const otro = await crearEscenario();
+    await repo.save(gen(otro));
+    await repo.save(gen(otro));
+    const m = (await repo.save(gen(mio))).generacion;
+    const futuro = new Date(Date.now() + 3600_000);
+
+    assert.equal((await repo.findVencidas(futuro, { limite: 1 })).length, 1);
+    const propias = await repo.findVencidas(futuro, { docenteId: mio.docenteId, limite: 1 });
+    assert.deepEqual(propias.map((g) => g.id), [m.id]);
+    assert.deepEqual(await repo.findVencidas(futuro, { docenteId: "no-es-id" }), []);
+    assert.deepEqual(await repo.findVencidas(new Date(0), { docenteId: mio.docenteId }), [], "no vencida");
+  });
+
   prueba("un juego pertenece a una sola generación", async () => {
     const esc = await crearEscenario();
     const a = (await repo.save(gen(esc))).generacion;

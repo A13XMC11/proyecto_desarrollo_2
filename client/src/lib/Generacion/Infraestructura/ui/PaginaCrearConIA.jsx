@@ -6,15 +6,16 @@ import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { nuevoIdOperacion } from "../../../../Infraestructura/http/clienteHttp";
 import { useConsulta } from "../../../../Infraestructura/http/useConsulta";
 import { useCursos, useEstudiantes } from "../../../Aula/Aplicacion/useAula";
-import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, TEMATICAS, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
+import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, MENSAJES_ERROR_GENERACION, TEMATICAS, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
 import { GeneracionApiHttp } from "../GeneracionApiHttp";
 
-const LIMITE_DIARIO = 3;
+const LIMITE_DIARIO_INICIAL = 3; // solo mientras llega el valor real del servidor
 const MAX_INSTRUCCION = 500;
 
 const Cupo = ({ cuotas }) => {
   const usadas = cuotas ? Math.round((cuotas.diaria?.consumido || 0) + (cuotas.diaria?.reservado || 0)) : null;
-  const libres = usadas === null ? null : Math.max(0, LIMITE_DIARIO - usadas);
+  const limite = cuotas?.maximoDiario ?? LIMITE_DIARIO_INICIAL;
+  const libres = usadas === null ? null : Math.max(0, limite - usadas);
   return (
     <Tarjeta>
       <p className="text-sm font-medium text-tenue">Cupo de hoy</p>
@@ -23,10 +24,10 @@ const Cupo = ({ cuotas }) => {
       ) : (
         <>
           <p className="mt-1 font-titulo text-3xl font-black">
-            {libres} <span className="text-lg font-bold text-tenue">de {LIMITE_DIARIO} disponibles</span>
+            {libres} <span className="text-lg font-bold text-tenue">de {limite} disponibles</span>
           </p>
           <div className="mt-3 flex gap-1.5" aria-hidden="true">
-            {Array.from({ length: LIMITE_DIARIO }, (_, i) => (
+            {Array.from({ length: limite }, (_, i) => (
               <span key={i} className={`h-2 flex-1 rounded-full ${i < libres ? "bg-marca-600" : "bg-marca-100"}`} />
             ))}
           </div>
@@ -58,7 +59,7 @@ export const PaginaCrearConIA = () => {
     setEnviando(true);
     setError(null);
     try {
-      await GeneracionApiHttp.solicitar(clave.current, {
+      const generacion = await GeneracionApiHttp.solicitar(clave.current, {
         cursoId,
         estudianteId: datos.estudianteId || undefined,
         habilidad: datos.habilidad,
@@ -67,12 +68,27 @@ export const PaginaCrearConIA = () => {
         instruccion: datos.instruccion.trim() || undefined
       });
       clave.current = nuevoIdOperacion();
-      setDatos((d) => ({ ...d, instruccion: "" }));
-      avisar("Solicitud enviada. Te avisamos aquí cuando esté lista para revisar.");
+      // La solicitud normalmente se resuelve en la misma llamada. Un reintento con la misma clave puede devolver
+      // una generación todavía en curso o interrumpida: eso no es un fallo de la IA y no debe presentarse como tal.
+      if (generacion.estado === "completada") {
+        setDatos((d) => ({ ...d, instruccion: "" }));
+        avisar("Borrador listo. Revísalo antes de usarlo en clase.");
+      } else if (generacion.estado === "fallida") {
+        avisar(MENSAJES_ERROR_GENERACION[generacion.errorCodigo] || "No se pudo crear la actividad. Puedes intentarlo de nuevo.", "error");
+      } else if (generacion.estado === "interrumpida") {
+        avisar("La solicitud se interrumpió antes de terminar. Puedes intentarlo de nuevo.", "error");
+      } else {
+        avisar("Tu solicitud sigue en marcha. Aparecerá en la lista cuando termine.");
+      }
       generaciones.recargar();
       cuotas.recargar();
     } catch (err) {
       setError(err);
+      // Un rechazo del servidor (sin cupo, apagada, otra en curso) cierra esa solicitud: la siguiente lleva clave nueva.
+      // Un corte de red no trae código: se conserva la clave y el reintento no duplica nada.
+      if (err.codigo) clave.current = nuevoIdOperacion();
+      generaciones.recargar();
+      cuotas.recargar();
     } finally {
       setEnviando(false);
     }
@@ -135,9 +151,12 @@ export const PaginaCrearConIA = () => {
               ayuda={`${datos.instruccion.length} de ${MAX_INSTRUCCION} caracteres. No escribas nombres de estudiantes.`}
             />
 
-            <Boton type="submit" tamano="lg" cargando={enviando} className="sm:justify-self-start">
-              <Sparkles className="size-5" aria-hidden="true" /> {enviando ? "Enviando…" : "Generar actividad"}
-            </Boton>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Boton type="submit" tamano="lg" cargando={enviando}>
+                <Sparkles className="size-5" aria-hidden="true" /> {enviando ? "Generando…" : "Generar actividad"}
+              </Boton>
+              <p role="status" className="text-sm text-tenue">{enviando ? "Esto puede tardar unos segundos. No cierres esta página." : ""}</p>
+            </div>
           </form>
         </Tarjeta>
 
@@ -146,7 +165,7 @@ export const PaginaCrearConIA = () => {
           <div className="flex gap-3 rounded-2xl bg-marca-50 p-4 text-sm text-marca-900 ring-1 ring-marca-100">
             <Info className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
             <p>
-              La conexión con la IA está en preparación: por ahora tu solicitud queda en cola. Mientras tanto puedes{" "}
+              La IA solo propone un borrador con las palabras del catálogo. Tú lo revisas y lo apruebas antes de que llegue a los estudiantes. También puedes{" "}
               <Link to="/panel/actividades/nueva" className="font-medium underline underline-offset-2">crear la actividad a mano</Link>.
             </p>
           </div>
@@ -176,6 +195,10 @@ export const PaginaCrearConIA = () => {
                       {new Date(g.creadaEn).toLocaleString("es-EC", { dateStyle: "medium", timeStyle: "short" })}
                       {p.instruccion && ` · "${p.instruccion}"`}
                     </p>
+                    {g.errorCodigo && MENSAJES_ERROR_GENERACION[g.errorCodigo] && (
+                      <p className="mt-1 text-sm text-tenue">{MENSAJES_ERROR_GENERACION[g.errorCodigo]}</p>
+                    )}
+                    {g.estado === "interrumpida" && <p className="mt-1 text-sm text-tenue">Se interrumpió antes de terminar. No se reintenta sola.</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <Insignia tono={estado.tono}>{estado.texto}</Insignia>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Archive, ArchiveRestore, ArrowLeft, BarChart3, CheckCircle2, FilePlus2, Play, Save, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, BarChart3, CheckCircle2, Eye, FilePlus2, Pencil, Play, Save, Sparkles, Trash2 } from "lucide-react";
 import { Boton, BotonEnlace, Cargando, Insignia, MensajeError, Tarjeta } from "../../../../Infraestructura/ui/componentes";
 import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { Confirmar } from "../../../Aula/Infraestructura/ui/PaginaCursos";
@@ -50,6 +50,7 @@ export const PaginaActividad = () => {
   const [errores, setErrores] = useState([]);
   const [ocupado, setOcupado] = useState(null);
   const [confirmar, setConfirmar] = useState(null);
+  const [previa, setPrevia] = useState(null); // contrato de ejercicios en vista previa; null = editando
 
   const { juego, versiones = [] } = consulta.datos || {};
   const borrador = versiones.find((v) => v.estado === "borrador");
@@ -61,6 +62,7 @@ export const PaginaActividad = () => {
   useEffect(() => {
     setEjercicios(aFormulario(borrador?.ejercicios));
     setErrores([]);
+    setPrevia(null);
   }, [borrador?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const conAccion = (nombre, funcion) => async () => {
@@ -86,9 +88,19 @@ export const PaginaActividad = () => {
     return !hay;
   };
 
+  // La vista previa muestra lo que quedaría guardado; no se puede previsualizar algo que no pasa la revisión
+  const alternarPrevia = () => {
+    if (previa) {
+      setPrevia(null);
+      return;
+    }
+    if (validar()) setPrevia(aContrato(ejercicios, mecanica, recursos));
+  };
+
   const guardar = conAccion("guardar", async () => {
     if (!validar()) return;
     await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, mecanica, recursos));
+    setPrevia(null);
     avisar("Borrador guardado.");
     consulta.recargar();
   });
@@ -179,15 +191,28 @@ export const PaginaActividad = () => {
             <div>
               <h2 id="titulo-borrador" className="font-extrabold">Borrador {borrador.numero ? `de la versión ${borrador.numero}` : ""}</h2>
               <p className="text-sm text-tenue">Revisa cada ejercicio. Nada llega a los estudiantes hasta que lo apruebes.</p>
+              {juego.origen === "ia" && (
+                <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-marca-800">
+                  <Sparkles className="size-4" aria-hidden="true" /> Propuesto por la IA. Puede equivocarse: corrige lo que haga falta antes de aprobar.
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap gap-2">
+              <Boton variante="fantasma" tamano="sm" onClick={alternarPrevia}>
+                {previa ? <Pencil className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+                {previa ? "Volver a editar" : "Vista previa"}
+              </Boton>
               <Boton variante="fantasma" tamano="sm" onClick={() => setConfirmar("descartar")}><Trash2 className="size-4" aria-hidden="true" /> Descartar</Boton>
               <Boton variante="secundario" tamano="sm" cargando={ocupado === "guardar"} onClick={guardar}><Save className="size-4" aria-hidden="true" /> Guardar</Boton>
               <Boton tamano="sm" cargando={ocupado === "aprobar"} onClick={aprobar}><CheckCircle2 className="size-4" aria-hidden="true" /> Aprobar</Boton>
             </div>
           </Tarjeta>
           <MensajeError error={catalogo.error} alReintentar={catalogo.recargar} />
-          <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} mecanica={mecanica} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
+          {previa ? (
+            <VistaVersion version={{ ejercicios: previa }} />
+          ) : (
+            <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} mecanica={mecanica} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
+          )}
         </section>
       ) : vigente ? (
         <section aria-labelledby="titulo-vigente">

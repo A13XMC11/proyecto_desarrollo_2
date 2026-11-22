@@ -8,9 +8,13 @@ class IGeneracionRepository {
   async marcarProcesando(id, docenteId) {}
   async marcarCompletada(id, docenteId, juegoId, uso) {}
   async marcarFallida(id, docenteId, errorCodigo, uso) {}
+  async marcarFallidaSiPendiente(id, docenteId, errorCodigo) {}
   async marcarInterrumpida(id, docenteId, uso) {}
+  async marcarInterrumpidaSiPendiente(id, docenteId, uso) {}
+  async reabrirReserva(id, docenteId) {}
   async contarActivas(docenteId) {}
-  async findVencidas(antesDe) {}
+  async findActivas(docenteId) {}
+  async findVencidas(antesDe, { docenteId, limite } = {}) {}
 }
 
 module.exports = IGeneracionRepository;
