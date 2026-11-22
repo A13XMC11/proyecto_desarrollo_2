@@ -15,6 +15,9 @@
 !/server-v2/package-lock.json
 !/server-v2/src/
 !/server-v2/tests/
+# Herramientas de medición y verificación, y la documentación operativa del servidor.
+!/server-v2/scripts/
+!/server-v2/docs/
 
 # Dependencias, secretos y archivos generados dentro del código permitido.
 **/node_modules/

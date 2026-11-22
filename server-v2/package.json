@@ -10,7 +10,9 @@
     "start": "node --env-file-if-exists=.env index.js",
     "dev": "nodemon --exec \"node --env-file-if-exists=.env\" index.js",
     "test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"tests/**/*.test.js\"",
-    "medir:generacion": "node --env-file-if-exists=.env scripts/medirGeneracion.js"
+    "medir:generacion": "node --env-file-if-exists=.env scripts/medirGeneracion.js",
+    "medir:rendimiento": "node --env-file-if-exists=.env scripts/medirRendimiento.js",
+    "verificar:despliegue": "node scripts/verificarDespliegue.js"
   },
   "author": "",
   "license": "ISC",
