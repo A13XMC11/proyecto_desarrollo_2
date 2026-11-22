@@ -45,6 +45,7 @@ function ejercicioJugable(ejercicio, semilla, indice) {
     consigna: ejercicio.consigna,
     objetivo: ejercicio.objetivo,
     recursoId: ejercicio.recursoId,
+    icono: ejercicio.icono,
     tienePista: Boolean(ejercicio.pista)
   };
   const semillaEjercicio = (semilla || 0) + indice * 7919;

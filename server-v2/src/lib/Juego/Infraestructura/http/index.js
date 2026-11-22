@@ -29,9 +29,9 @@ const ListarRecursos = require("../../Aplicacion/ListarRecursos");
 module.exports = function registerJuegoModule(app) {
   const repo = new JuegoRepositoryMongoose();
   const versionRepo = new VersionRepositoryMongoose();
-  // Si el catálogo es incoherente, el servidor no arranca. Los 10 ejercicios están apagados por defecto (§7.4.4).
+  // Si el catálogo es incoherente, el servidor no arranca. Los 10 ejercicios están habilitados por defecto (sprint 7); PERMITIR_10_EJERCICIOS=false los apaga.
   const catalogo = new CatalogoRecursosJson();
-  const validacion = { permitirDiez: process.env.PERMITIR_10_EJERCICIOS === "true" };
+  const validacion = { permitirDiez: process.env.PERMITIR_10_EJERCICIOS !== "false" };
 
   const juegoController = new JuegoController({
     crearJuego: new CrearJuego(repo, new CursoRepositorySequelize(), new EstudianteRepositorySequelize()),

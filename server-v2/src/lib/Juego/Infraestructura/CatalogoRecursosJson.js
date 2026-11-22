@@ -1,5 +1,6 @@
 const EntradaInvalida = require("../../Compartido/Dominio/Errores/EntradaInvalida");
 const { TEMATICAS } = require("../../Compartido/Dominio/ValoresPermitidos");
+const { icono } = require("../../Compartido/Dominio/Validaciones");
 
 const VOCALES = ["a", "e", "i", "o", "u"];
 const MAX_LARGO_SILABA = 10;
@@ -24,6 +25,11 @@ function validarRecurso(recurso, vistos) {
   const esperada = VOCALES.includes(primera) ? primera : undefined;
   if (recurso.vocalInicial !== esperada) {
     throw new EntradaInvalida(`${donde}: la vocal inicial debe ser ${esperada ? `"${esperada}"` : "omitida (no empieza con vocal)"}`);
+  }
+  try {
+    icono(recurso.icono, "icono");
+  } catch (error) {
+    throw new EntradaInvalida(`${donde}: ${error.message}`);
   }
   vistos.add(recurso.id);
 }

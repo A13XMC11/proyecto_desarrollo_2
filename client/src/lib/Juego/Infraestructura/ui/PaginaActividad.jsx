@@ -95,7 +95,7 @@ export const PaginaActividad = () => {
   const { juego, versiones = [] } = consulta.datos || {};
   const borrador = versiones.find((v) => v.estado === "borrador");
   const vigente = versiones.find((v) => v.id === juego?.versionActualId);
-  const mecanica = juego?.mecanica;
+  const habilidad = juego?.habilidad;
   const catalogo = useRecursos(borrador?.configuracion.tematica);
   const recursos = catalogo.datos || [];
 
@@ -121,7 +121,7 @@ export const PaginaActividad = () => {
       avisar("El catálogo de palabras todavía no cargó. Inténtalo de nuevo en un momento.", "error");
       return false;
     }
-    const encontrados = revisar(ejercicios, mecanica, recursos);
+    const encontrados = revisar(ejercicios, habilidad, recursos);
     setErrores(encontrados);
     const hay = encontrados.some((e) => Object.keys(e).length);
     if (hay) avisar("Hay ejercicios por corregir. Están marcados en rojo.", "error");
@@ -139,7 +139,7 @@ export const PaginaActividad = () => {
       return;
     }
     try {
-      setPrevia(aContrato(ejercicios, mecanica, recursos));
+      setPrevia(aContrato(ejercicios, habilidad, recursos));
     } catch (error) {
       avisar(error.message, "error");
     }
@@ -147,7 +147,7 @@ export const PaginaActividad = () => {
 
   const guardar = conAccion("guardar", async () => {
     if (!validar()) return;
-    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, mecanica, recursos));
+    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, habilidad, recursos));
     setPrevia(null);
     avisar("Borrador guardado.");
     consulta.recargar();
@@ -160,7 +160,7 @@ export const PaginaActividad = () => {
       avisar(`Para aprobar hacen falta exactamente ${cantidad} ejercicios.`, "error");
       return;
     }
-    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, mecanica, recursos));
+    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, habilidad, recursos));
     await JuegoApiHttp.aprobarVersion(id, borrador.id);
     avisar("Actividad aprobada. Ya se puede jugar en el aula.");
     consulta.recargar();
@@ -253,7 +253,7 @@ export const PaginaActividad = () => {
             </div>
           </Tarjeta>
           <MensajeError error={catalogo.error} alReintentar={catalogo.recargar} />
-          <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} mecanica={mecanica} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
+          <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} habilidad={habilidad} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
         </section>
       ) : vigente ? (
         <section aria-labelledby="titulo-vigente">

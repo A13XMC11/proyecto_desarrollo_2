@@ -13,8 +13,8 @@ describe("CatalogoRecursosJson: catálogo inicial", () => {
   const catalogo = new CatalogoRecursosJson();
   const todos = catalogo.listar();
 
-  it("tiene entre 15 y 25 recursos con ids únicos", () => {
-    assert.ok(todos.length >= 15 && todos.length <= 25, `hay ${todos.length}`);
+  it("tiene entre 50 y 100 recursos con ids únicos", () => {
+    assert.ok(todos.length >= 50 && todos.length <= 100, `hay ${todos.length}`);
     assert.equal(new Set(todos.map((r) => r.id)).size, todos.length);
   });
 
@@ -34,7 +34,20 @@ describe("CatalogoRecursosJson: catálogo inicial", () => {
       const deTema = catalogo.listar({ tematica });
       const vocales = new Set(deTema.map((r) => r.vocalInicial).filter(Boolean));
       assert.deepEqual([...vocales].sort(), VOCALES, tematica);
-      assert.ok(deTema.length >= 5, tematica);
+      assert.ok(deTema.length >= 10, `${tematica} tiene ${deTema.length}`);
+    }
+  });
+
+  it("la mayoría de las palabras trae un icono (emoji) y todos los iconos son válidos", () => {
+    const conIcono = todos.filter((r) => r.icono);
+    assert.ok(conIcono.length >= todos.length * 0.85, `${conIcono.length} de ${todos.length}`);
+    for (const r of conIcono) assert.match(r.icono, /^\p{Extended_Pictographic}/u, r.id);
+  });
+
+  it("cada temática tiene palabras de 2, 3 y 4 sílabas para contar y completar", () => {
+    for (const tematica of TEMATICAS) {
+      const largos = new Set(catalogo.listar({ tematica }).map((r) => r.silabas.length));
+      for (const n of [2, 3]) assert.ok(largos.has(n), `${tematica} sin palabras de ${n} sílabas`);
     }
   });
 
@@ -87,5 +100,7 @@ describe("CatalogoRecursosJson: rechaza un catálogo incoherente al cargar", () 
   it("palabra con vocal inicial sin declararla", () => assert.throws(() => catalogoCon(recurso({ id: "oso", palabra: "oso", silabas: ["o", "so"] })), /vocal/));
   it("vocal inicial que no coincide", () => assert.throws(() => catalogoCon(recurso({ id: "oso", palabra: "oso", silabas: ["o", "so"], vocalInicial: "a" })), /vocal/));
   it("vocal inicial declarada en una palabra con consonante", () => assert.throws(() => catalogoCon(recurso({ vocalInicial: "a" })), /vocal/));
+  it("icono que no es un emoji", () => assert.throws(() => catalogoCon(recurso({ icono: "gato" })), /icono/));
+  it("icono vacío se trata como ausente", () => assert.doesNotThrow(() => catalogoCon(recurso({ icono: "" }))));
   it("sin lista de recursos", () => assert.throws(() => new CatalogoRecursosJson({}), /recursos/));
 });

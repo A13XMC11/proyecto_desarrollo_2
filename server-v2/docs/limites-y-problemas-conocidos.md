@@ -7,15 +7,15 @@ sistema **no** hace o no se ha comprobado, para que nadie lo descubra en la demo
 
 | Qué | Límite | Dónde se fija |
 |---|---|---|
-| Habilidades y mecánicas | Vocales (elegir opción) y sílabas (ordenar) | `ValoresPermitidos` |
-| Temáticas | Animales, objetos cotidianos, naturaleza | ídem |
-| Catálogo de palabras | 21 palabras (7 por temática), **sin imágenes ni audio**; revisado por el equipo, **pendiente de contraste con un docente de grados menores** | `learning-resources.json` |
-| Ejercicios por actividad | 5 (10 solo con `PERMITIR_10_EJERCICIOS=true`) | variable de entorno |
+| Habilidades y mecánicas | Vocales, completar la sílaba y contar sílabas (elegir opción) y palabras con sílabas (ordenar) | `ValoresPermitidos` |
+| Temáticas | Animales, objetos cotidianos, naturaleza, cuerpo humano y escuela | ídem |
+| Catálogo de palabras | 69 palabras (13 o 14 por temática) con un icono emoji (algunas sin icono); **sin imágenes ni audio**; revisado por el equipo, **pendiente de contraste con un docente de grados menores** | `learning-resources.json` |
+| Ejercicios por actividad | 5 o 10 (`PERMITIR_10_EJERCICIOS=false` los limita a 5) | variable de entorno |
 | Intentos por ejercicio | 2; al segundo fallo se muestra la solución y se avanza | dominio |
 | Instrucción libre a la IA | 500 caracteres, sin HTML, URL ni correos | `Generacion` |
 | Generaciones con IA | 3 por docente y día (`AI_MAX_DIARIAS`), 1 simultánea, 0 reintentos al proveedor, presupuesto global mensual | variables de entorno |
 | Generación | **Apagada por defecto** (`AI_ENABLED=false`) hasta la autorización y el presupuesto (S4-08) | variable de entorno |
-| Palabras que ofrece la IA | Vocales: solo con vocal inicial. Sílabas: de 2 a 3 sílabas | `RecursosParaGeneracion` |
+| Palabras que ofrece la IA | Vocales: solo con vocal inicial. Ordenar sílabas: de 2 a 3. Completar y contar: de 2 a 4. Solo del catálogo | `RecursosParaGeneracion` |
 | Sesión del docente | 4 h sin actividad, 12 h como máximo | `sesion.js` |
 | Resultados | Cada consulta procesa como máximo las 2000 partidas más recientes | `LIMITE_RESULTADOS` |
 | Estudiante | Código de lista de 1 a 6 caracteres, apodo opcional de hasta 20, franja de edad 5 a 7, curso de 1.º a 3.º EGB | modelos |
@@ -31,6 +31,14 @@ sistema **no** hace o no se ha comprobado, para que nadie lo descubra en la demo
 ## 3. Problemas conocidos
 
 Prioridad: **Alta** si afecta seguridad o datos de personas; **Media** si afecta la operación o puede sorprender en producción; **Baja** si es una mejora.
+
+### Alcance de la creación (sprint 7)
+| # | Límite | Prioridad |
+|---|---|---|
+| C1 | La IA **elige y redacta dentro de un molde**: no inventa mecánicas ni palabras nuevas. Es decisión del plan (§3.2, §3.3), no un fallo | Baja: por diseño |
+| C2 | Aún no hay mecánica de emparejar, enfoque estructurado («practicar A y E»), palabras propuestas por la IA ni catálogo que crezca solo | Media: propuesto en el plan §15b |
+| C3 | Los iconos son emojis: se ven distinto según el sistema (Android, iOS, Windows). No se probaron en tabletas reales | Media |
+| C4 | Algunas palabras no tienen icono (mesa, espalda, estómago, pizarra) | Baja |
 
 ### Seguridad
 | # | Problema | Prioridad | Qué haría falta |

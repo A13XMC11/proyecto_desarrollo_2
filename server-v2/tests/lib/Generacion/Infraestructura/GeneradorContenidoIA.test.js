@@ -55,6 +55,16 @@ const validar = (habilidad, ejercicios) => {
   }).validarContenido(catalogo);
 };
 
+const INDICES = { abeja: 1, elefante: 2, iguana: 0, oso: 1, urraca: 2 };
+const propuestaCompletar = {
+  titulo: "La sílaba que falta",
+  ejercicios: PALABRAS.map((recursoId) => ({ recursoId, indiceFaltante: INDICES[recursoId], consigna: "¿Qué sílaba falta?", pista: "Lee las sílabas en voz alta" }))
+};
+const propuestaContar = {
+  titulo: "Cuenta las sílabas",
+  ejercicios: PALABRAS.map((recursoId) => ({ recursoId, consigna: "¿Cuántas sílabas tiene?", pista: "Aplaude por cada sílaba" }))
+};
+
 describe("construirPromptGeneracion", () => {
   it("restringe el esquema a los ids del catálogo y a la cantidad pedida", () => {
     const { esquema } = construirPromptGeneracion(solicitud("vocales"));
@@ -81,6 +91,17 @@ describe("construirPromptGeneracion", () => {
     assert.throws(() => new Ejercicio({ ...base, pista: "b".repeat(MAX_PISTA + 1) }));
     const { esquema: silabas } = construirPromptGeneracion(solicitud("palabras_silabas"));
     assert.equal(silabas.properties.ejercicios.items.properties.consigna.maxLength, MAX_CONSIGNA);
+  });
+
+  it("completar y contar piden solo lo que la IA decide: palabra, hueco y redacción", () => {
+    const completar = construirPromptGeneracion(solicitud("completar_silaba"));
+    const propsCompletar = completar.esquema.properties.ejercicios.items.properties;
+    assert.deepEqual(Object.keys(propsCompletar).sort(), ["consigna", "indiceFaltante", "pista", "recursoId"]);
+    assert.equal(propsCompletar.consigna.maxLength, MAX_CONSIGNA);
+    assert.match(completar.usuario, /indiceFaltante/);
+    const contar = construirPromptGeneracion(solicitud("contar_silabas"));
+    assert.deepEqual(Object.keys(contar.esquema.properties.ejercicios.items.properties).sort(), ["consigna", "pista", "recursoId"]);
+    assert.doesNotMatch(contar.sistema + contar.usuario, /vocalesOpciones/);
   });
 
   it("la instrucción no puede cerrar su propio bloque", () => {
@@ -130,6 +151,44 @@ describe("GeneradorContenidoIA", () => {
     const { ejercicios } = await generadorCon(falsoFetch(respuestaGemini(propuestaSilabas))).generar(solicitud("palabras_silabas"));
     assert.deepEqual(ejercicios[1].piezas.map((p) => p.texto), ["e", "le", "fan", "te"]);
     assert.doesNotThrow(() => validar("palabras_silabas", ejercicios));
+  });
+
+  it("completar: las opciones salen del catálogo y la respuesta es la sílaba aprobada", async () => {
+    const { ejercicios } = await generadorCon(falsoFetch(respuestaGemini(propuestaCompletar))).generar(solicitud("completar_silaba"));
+    assert.equal(ejercicios[0].objetivo, "a __ ja");
+    assert.equal(ejercicios[0].icono, "🐝");
+    assert.equal(ejercicios[0].opciones.find((o) => o.id === ejercicios[0].respuestaCorrectaId).texto, "be");
+    assert.doesNotThrow(() => validar("completar_silaba", ejercicios));
+  });
+
+  it("contar: el número lo calcula el servidor aunque el modelo no lo diga", async () => {
+    const { ejercicios } = await generadorCon(falsoFetch(respuestaGemini(propuestaContar))).generar(solicitud("contar_silabas"));
+    const respuesta = (e) => e.opciones.find((o) => o.id === e.respuestaCorrectaId).texto;
+    assert.deepEqual(ejercicios.map(respuesta), ["3", "4", "3", "2", "3"]);
+    assert.doesNotThrow(() => validar("contar_silabas", ejercicios));
+  });
+
+  it("completar: un hueco que no existe o una palabra inventada llegan a la validación y se rechazan", async () => {
+    const conCambio = (cambio) => propuestaCompletar.ejercicios.map((e, i) => (i === 0 ? { ...e, ...cambio } : e));
+    for (const [cambio, mensaje] of [[{ indiceFaltante: 3 }, /hueco/], [{ recursoId: "dragon" }, /no existe en el catálogo/]]) {
+      const { ejercicios } = await generadorCon(falsoFetch(respuestaGemini({ ...propuestaCompletar, ejercicios: conCambio(cambio) }))).generar(solicitud("completar_silaba"));
+      assert.throws(() => validar("completar_silaba", ejercicios), mensaje);
+    }
+  });
+
+  it("contar: una palabra inventada se rechaza; una consigna que nombra la palabra también", async () => {
+    const ejercicios = propuestaContar.ejercicios;
+    const inventada = await generadorCon(falsoFetch(respuestaGemini({ ...propuestaContar, ejercicios: [{ ...ejercicios[0], recursoId: "dragon" }, ...ejercicios.slice(1)] }))).generar(solicitud("contar_silabas"));
+    assert.throws(() => validar("contar_silabas", inventada.ejercicios), /no existe en el catálogo/);
+    const revela = await generadorCon(falsoFetch(respuestaGemini({ ...propuestaContar, ejercicios: [{ ...ejercicios[0], consigna: "¿Cuántas sílabas tiene abeja?" }, ...ejercicios.slice(1)] }))).generar(solicitud("contar_silabas"));
+    assert.throws(() => validar("contar_silabas", revela.ejercicios), /consigna contiene la respuesta/);
+  });
+
+  it("vocales y sílabas también llevan el icono del recurso", async () => {
+    const vocales = await generadorCon(falsoFetch(respuestaGemini(propuestaVocales))).generar(solicitud("vocales"));
+    assert.equal(vocales.ejercicios[0].icono, "🐝");
+    const silabas = await generadorCon(falsoFetch(respuestaGemini(propuestaSilabas))).generar(solicitud("palabras_silabas"));
+    assert.equal(silabas.ejercicios[1].icono, "🐘");
   });
 
   it("suma los tokens de razonamiento a la salida", async () => {

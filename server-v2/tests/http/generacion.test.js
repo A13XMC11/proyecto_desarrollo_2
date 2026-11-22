@@ -69,6 +69,42 @@ describe("HTTP: generación con IA (generador falso) de la solicitud a la partid
     assert.match(cuotas.dia, /^\d{4}-\d{2}-\d{2}$/);
   });
 
+  prueba("las habilidades nuevas (completar y contar sílabas) y las temáticas nuevas funcionan de punta a punta, con 10 ejercicios", async () => {
+    await crearAsegurarCanales().ejecutar();
+    const casos = [["completar_silaba", "cuerpo"], ["contar_silabas", "escuela"]];
+    for (const [habilidad, tematica] of casos) {
+      const docente = await registrarDocente(llamar);
+      const curso = (await llamar("/api/cursos", { metodo: "POST", docente, cuerpo: { grado: "2.º EGB", paralelo: "A", anioLectivo: "2026-2027" } })).cuerpo.id;
+      const estudiante = (await llamar("/api/estudiantes", { metodo: "POST", docente, cuerpo: { cursoId: curso, codigoLista: "B01", franjaEdad: 6, avatarId: "ave", intereses: [tematica] } }));
+      assert.equal(estudiante.status, 201, JSON.stringify(estudiante.cuerpo));
+      const creada = await llamar("/api/generaciones", {
+        metodo: "POST", docente, cabeceras: { "idempotency-key": `clave-http-${habilidad}-0001` },
+        cuerpo: { cursoId: curso, estudianteId: estudiante.cuerpo.id, habilidad, tematica, cantidad: 10 }
+      });
+      assert.equal(creada.status, 201, JSON.stringify(creada.cuerpo));
+      assert.equal(creada.cuerpo.estado, "completada", `${habilidad}: ${JSON.stringify(creada.cuerpo)}`);
+
+      const juegoId = creada.cuerpo.juegoId;
+      assert.equal((await llamar(`/api/juegos/${juegoId}`, { docente })).cuerpo.habilidad, habilidad);
+      const version = (await llamar(`/api/juegos/${juegoId}/versiones`, { docente })).cuerpo[0];
+      assert.equal(version.ejercicios.length, 10);
+      assert.ok(version.ejercicios.every((e) => e.icono || e.recursoId), "cada ejercicio nombra su palabra");
+      const aprobada = await llamar(`/api/juegos/${juegoId}/versiones/${version.id}/aprobar`, { metodo: "POST", docente });
+      assert.equal(aprobada.status, 200, JSON.stringify(aprobada.cuerpo));
+
+      const partida = await llamar("/api/partidas", { metodo: "POST", docente, cuerpo: { estudianteId: estudiante.cuerpo.id, juegoId, canal: "aula_computador" } });
+      assert.equal(partida.status, 201);
+      const jugable = (await llamar(`/api/partidas/${partida.cuerpo.id}/jugable`, { docente })).cuerpo;
+      assert.equal(jugable.ejercicios.length, 10);
+      assert.ok(jugable.ejercicios.every((e) => e.tipo === "seleccionar_opcion" && e.opciones.length === 3));
+      assert.ok(jugable.ejercicios.some((e) => e.icono), "la vista del aula incluye el icono");
+      assert.ok(!JSON.stringify(jugable).includes("respuestaCorrectaId"));
+      const e1 = version.ejercicios[0];
+      const bien = await llamar(`/api/partidas/${partida.cuerpo.id}/intentos`, { metodo: "POST", docente, cuerpo: { ejercicioId: e1.id, eleccion: e1.respuestaCorrectaId, operacionId: `op-${habilidad}-1` } });
+      assert.equal(bien.cuerpo.esCorrecto, true, `${habilidad}: ${JSON.stringify(bien.cuerpo)}`);
+    }
+  });
+
   prueba("el cupo diario se aplica por HTTP con el código que muestra la pantalla", async () => {
     await crearAsegurarCanales().ejecutar();
     const docente = await registrarDocente(llamar);

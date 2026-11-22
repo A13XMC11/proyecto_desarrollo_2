@@ -61,7 +61,11 @@ describe("leerConfiguracionGeneracion (entorno)", () => {
     const c = leer({});
     assert.equal(c.habilitada, false);
     assert.equal(c.maxDiarias, 3);
-    assert.equal(c.permitirDiez, false);
+    assert.equal(c.permitirDiez, true, "los 10 ejercicios vienen habilitados desde el sprint 7");
+  });
+
+  it("PERMITIR_10_EJERCICIOS=false apaga los 10 ejercicios", () => {
+    assert.equal(leer({ PERMITIR_10_EJERCICIOS: "false" }).permitirDiez, false);
   });
 
   it("AI_ENABLED=true sin los valores económicos no deja arrancar", () => {

@@ -16,6 +16,24 @@ HX-ODM-JS **code first**: no hay migraciones ni DDL escrito a mano; **el esquema
 del primer despliegue hay que arrancar una vez con `SQL_SYNC_ALTER=true`, con respaldo previo, y volver a `false`. No hay historial de
 cambios ni forma de deshacerlos. Si el proyecto crece, el paso natural son migraciones numeradas.
 
+### Cambios de valores permitidos (sprint 7)
+
+El sprint 7 añadió dos habilidades (`completar_silaba`, `contar_silabas`) y dos temáticas (`cuerpo`, `escuela`). En PostgreSQL son tipos `ENUM`:
+una base **nueva** los crea completos; una base **ya existente** con `SQL_SYNC_ALTER=false` no se entera. Antes de arrancar la versión nueva sobre ella, con respaldo previo:
+
+```sql
+ALTER TYPE enum_generaciones_ia_habilidad ADD VALUE IF NOT EXISTS 'completar_silaba';
+ALTER TYPE enum_generaciones_ia_habilidad ADD VALUE IF NOT EXISTS 'contar_silabas';
+ALTER TYPE enum_generaciones_ia_tematica ADD VALUE IF NOT EXISTS 'cuerpo';
+ALTER TYPE enum_generaciones_ia_tematica ADD VALUE IF NOT EXISTS 'escuela';
+ALTER TYPE enum_estudiante_intereses_tematica ADD VALUE IF NOT EXISTS 'cuerpo';
+ALTER TYPE enum_estudiante_intereses_tematica ADD VALUE IF NOT EXISTS 'escuela';
+```
+
+Es seguro repetirlo. Sin esto, pedir una generación nueva o guardar un interés nuevo falla con un error de PostgreSQL. MongoDB no necesita nada:
+sus valores permitidos se validan en la aplicación y los ejercicios con `icono` conviven con los anteriores (el campo es opcional).
+**Comprobado:** en las bases de pruebas, `sync({ alter: true })` añadió los valores sin perder filas.
+
 ## 2. Respaldo y restauración
 
 ### Demostrado (una vez, sobre las bases de pruebas)

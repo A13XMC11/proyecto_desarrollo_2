@@ -56,3 +56,18 @@ previa) → aula (reanudar la partida a medias y responder).
 | 2 | `scripts/` estaba en `.gitignore`: `medirGeneracion.js` no se había subido aunque `package.json` lo usaba | Corregido en el sprint 5 |
 | 3 | El `pg_dump` del PATH no coincidía con la versión del servidor PostgreSQL | Resuelto con `PG_BIN` (`instalacion.md`) |
 | 4 | `information_schema.tables` oculta tablas según los privilegios de la sesión | Las pruebas usan `pg_tables` |
+
+## 5. Sprint 7 — más juegos y mayor libertad de creación
+
+Criterios de cierre (plan §15b) y su evidencia:
+
+| # | Criterio | Estado | Evidencia |
+|---|---|---|---|
+| 1 | Las cuatro habilidades se crean con IA y a mano, se juegan y se ven en resultados | **Cumplido** (resultados: ver nota) | `tests/http/generacion.test.js` («habilidades nuevas… de punta a punta, con 10 ejercicios»): solicitar → aprobar → partida → intento correcto; editor a mano en navegador (cliente `Ejercicios.test.js`, 19 pruebas) |
+| 2 | Un conteo o una sílaba equivocados se rechazan como contenido inválido | **Cumplido** | `HabilidadesSilabas.test.js` y `GeneradorContenidoIA.test.js`; además el servidor calcula la respuesta, así que la IA no puede equivocarla |
+| 3 | Las actividades anteriores se siguen abriendo y jugando | **Cumplido** | La suite anterior pasa sin cambios, salvo la prueba que daba por apagados los 10 ejercicios |
+| 4 | Una base vacía y una existente quedan listas | **Cumplido, con paso manual** | Base vacía: `baseDesdeCero.test.js`. Base existente: `ALTER TYPE` de `recuperacion.md` §1 (no probado en un alojamiento real) |
+| 5 | La suite completa pasa y las capas siguen limpias | **Cumplido** | `npm test`: 373 de 373 (incluye `capas.test.js`); cliente: 19 de 19 |
+
+Recorrido en navegador: se generó «Completar la sílaba · Cuerpo humano · 10 ejercicios» con el generador falso; el editor mostró el icono, el selector de sílaba y las opciones, y la vista previa el icono, la palabra con hueco y tres sílabas. Sin errores ni avisos en la consola.
+**No se probó** con la IA real (sigue sin habilitar), en teléfonos o tabletas, ni la pantalla de resultados con las habilidades nuevas (usa los mismos indicadores por partida, pero no se revisó a mano).

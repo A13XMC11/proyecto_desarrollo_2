@@ -17,7 +17,10 @@ export const SelectOption = ({ ejercicio, resultado, bloqueado, alElegir }) => {
             disabled={bloqueado}
             onClick={() => alElegir(opcion.id)}
             aria-label={`${opcion.texto}${correcta ? ", correcta" : incorrecta ? ", incorrecta" : ""}`}
-            className={`relative grid aspect-square max-h-48 cursor-pointer place-items-center rounded-3xl font-titulo text-6xl font-black transition-[scale,background-color] duration-150 ease-[var(--ease-salida)] active:scale-[0.97] disabled:cursor-default sm:text-7xl ${
+            className={`relative grid aspect-square max-h-48 cursor-pointer place-items-center rounded-3xl font-titulo font-black transition-[scale,background-color] duration-150 ease-[var(--ease-salida)] active:scale-[0.97] disabled:cursor-default ${
+              // Una vocal o un número caben en grande; una sílaba de 3 letras necesita menos tamaño para no salirse del botón
+              opcion.texto.length > 2 ? "text-4xl sm:text-6xl" : "text-6xl sm:text-7xl"
+            } ${
               correcta
                 ? "animate-acierto bg-exito-suave text-exito ring-4 ring-exito"
                 : incorrecta

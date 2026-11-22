@@ -165,12 +165,24 @@ la defensa es la validación del servidor (el proveedor puede ignorar partes del
 
 | Campo | Valores |
 |---|---|
-| Habilidad → mecánica | `vocales` → `seleccionar_opcion` · `palabras_silabas` → `ordenar_silabas` |
-| Temática | `animales`, `objetos_cotidianos`, `naturaleza` |
-| Cantidad | 5 (10 solo con `PERMITIR_10_EJERCICIOS=true`) |
+| Habilidad → mecánica | `vocales`, `completar_silaba`, `contar_silabas` → `seleccionar_opcion` · `palabras_silabas` → `ordenar_silabas` |
+| Temática | `animales`, `objetos_cotidianos`, `naturaleza`, `cuerpo`, `escuela` |
+| Cantidad | 5 o 10 (`PERMITIR_10_EJERCICIOS=false` deja solo 5) |
 | Franja de edad | 5, 6 o 7 años (solo si la generación es para un estudiante) |
 | Título | 3 a 80 caracteres |
 | Recursos | Solo ids del catálogo (`learning-resources.json`), de la temática pedida |
+
+### Habilidades de sílabas (sprint 7)
+
+En `completar_silaba` y `contar_silabas` la IA decide **menos** que en vocales, a propósito: lo que no decide no puede equivocarlo.
+
+| Habilidad | La IA entrega | El servidor calcula |
+|---|---|---|
+| `completar_silaba` | `recursoId`, `indiceFaltante` (desde 0), `consigna`, `pista` | el objetivo con el hueco (`a __ ja`), la sílaba correcta y dos opciones falsas de otras palabras (nunca sílabas que ya se ven) |
+| `contar_silabas` | `recursoId`, `consigna`, `pista` | el número correcto y tres números seguidos como opciones |
+
+La validación comprueba de forma determinista, contra la división silábica aprobada del catálogo: que el objetivo tenga el hueco único y las sílabas de la palabra, que la respuesta sea la sílaba que falta (o el número de sílabas) y que el icono sea el del recurso.
+Un `indiceFaltante` fuera de rango o una palabra inventada terminan en `CONTENIDO_INVALIDO`. Los ejercicios llevan el `icono` (emoji) del recurso, si lo tiene.
 
 ## 4. Ejemplos
 

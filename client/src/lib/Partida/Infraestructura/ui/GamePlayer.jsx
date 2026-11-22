@@ -4,6 +4,7 @@ import { Boton, MensajeError } from "../../../../Infraestructura/ui/componentes"
 import { usePartida } from "../../Aplicacion/usePartida";
 import { SelectOption } from "./mecanicas/SelectOption";
 import { OrderSyllables } from "./mecanicas/OrderSyllables";
+import { ObjetivoGrande } from "./ObjetivoGrande";
 
 // El motor elige el componente según el tipo permitido; nunca ejecuta código generado
 const MECANICAS = { seleccionar_opcion: SelectOption, ordenar_silabas: OrderSyllables };
@@ -69,9 +70,7 @@ export const GamePlayer = ({ partidaId, alOtro, alSalir }) => {
 
       <section ref={seccion} key={ejercicio.id} className="animate-aparecer rounded-[2rem] bg-white p-5 shadow-xl shadow-marca-900/5 ring-1 ring-marca-100 sm:p-10" aria-labelledby="consigna">
         <p id="consigna" className="text-center text-xl text-tenue sm:text-2xl">{ejercicio.consigna}</p>
-        {ejercicio.objetivo && ejercicio.tipo === "seleccionar_opcion" && (
-          <p className="my-6 text-center font-titulo text-6xl font-black tracking-wide text-marca-900 sm:text-8xl">{ejercicio.objetivo}</p>
-        )}
+        {ejercicio.tipo === "seleccionar_opcion" && <ObjetivoGrande objetivo={ejercicio.objetivo} icono={ejercicio.icono} />}
         <div className={ejercicio.tipo === "ordenar_silabas" ? "mt-8" : ""}>
           <Mecanica ejercicio={ejercicio} resultado={resultado} bloqueado={bloqueado} alElegir={responder} alEnviar={responder} />
         </div>

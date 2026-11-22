@@ -1,5 +1,6 @@
 const ErrorDelGenerador = require("../../Compartido/Dominio/Errores/ErrorDelGenerador");
 const { construirPromptGeneracion } = require("./construirPromptGeneracion");
+const { completarSilaba, contarSilabas, conIcono } = require("./ejerciciosDeSilabas");
 
 const URL_BASE = "https://generativelanguage.googleapis.com";
 const PROVEEDOR = "gemini";
@@ -105,12 +106,40 @@ class GeneradorContenidoIA {
     return uso;
   }
 
-  armarEjercicios({ mecanica, recursos }, propuestos) {
+  armarEjercicios({ habilidad, recursos }, propuestos) {
     const porId = new Map(recursos.map((r) => [r.id, r]));
-    return propuestos.map((e, i) => {
-      const id = `e${i + 1}`;
-      return mecanica === "seleccionar_opcion" ? this.ejercicioOpciones(id, e, porId) : this.ejercicioSilabas(id, e, porId);
-    });
+    const armar = {
+      vocales: (id, e) => this.ejercicioOpciones(id, e, porId),
+      completar_silaba: (id, e, i) => this.ejercicioCompletar(id, e, porId, recursos, i),
+      contar_silabas: (id, e) => this.ejercicioContar(id, e, porId)
+    }[habilidad] || ((id, e) => this.ejercicioSilabas(id, e, porId));
+    return propuestos.map((e, i) => armar(`e${i + 1}`, e, i));
+  }
+
+  // Si la IA nombra una palabra que no existe, el ejercicio sale con ese id para que la validación lo rechace como CONTENIDO_INVALIDO
+  ejercicioDesconocido(id, e) {
+    return {
+      id, consigna: e?.consigna, objetivo: String(e?.recursoId), recursoId: e?.recursoId,
+      opciones: [{ id: "o1", texto: "a" }, { id: "o2", texto: "e" }, { id: "o3", texto: "i" }], respuestaCorrectaId: "o1"
+    };
+  }
+
+  ejercicioCompletar(id, e, porId, recursos, posicion) {
+    const recurso = porId.get(e?.recursoId);
+    if (!recurso) return this.ejercicioDesconocido(id, e);
+    const pista = e?.pista || undefined;
+    if (!Number.isInteger(e?.indiceFaltante) || e.indiceFaltante < 0 || e.indiceFaltante >= recurso.silabas.length) {
+      // Un hueco que no existe: sin marca, la validación lo rechaza
+      const opciones = recurso.silabas.slice(0, 3).map((texto, j) => ({ id: `o${j + 1}`, texto }));
+      return { id, consigna: e?.consigna, ...(pista ? { pista } : {}), objetivo: recurso.silabas.join(" "), recursoId: recurso.id, ...conIcono(recurso), opciones, respuestaCorrectaId: "o1" };
+    }
+    return completarSilaba({ id, recurso, indice: e.indiceFaltante, consigna: e.consigna, pista, recursos, semilla: posicion });
+  }
+
+  ejercicioContar(id, e, porId) {
+    const recurso = porId.get(e?.recursoId);
+    if (!recurso) return this.ejercicioDesconocido(id, e);
+    return contarSilabas({ id, recurso, consigna: e.consigna, pista: e?.pista || undefined });
   }
 
   // Un id que no existe se deja pasar tal cual: la validación pedagógica lo rechaza como CONTENIDO_INVALIDO
@@ -125,6 +154,7 @@ class GeneradorContenidoIA {
       ...(e?.pista ? { pista: e.pista } : {}),
       objetivo: recurso ? recurso.palabra : String(e?.recursoId),
       recursoId: e?.recursoId,
+      ...conIcono(recurso),
       opciones: textos.map((t, j) => ({ id: `o${j + 1}`, texto: t.toUpperCase() })),
       respuestaCorrectaId: `o${(correcta === -1 ? 0 : correcta) + 1}`
     };
@@ -138,6 +168,7 @@ class GeneradorContenidoIA {
       consigna: e?.consigna,
       objetivo: recurso ? recurso.palabra : String(e?.palabraId),
       palabraId: e?.palabraId,
+      ...conIcono(recurso),
       piezas,
       ordenCorrecto: piezas.map((p) => p.id)
     };

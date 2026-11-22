@@ -21,7 +21,7 @@ const mezclarPiezas = (piezas, ordenCorrecto) => {
 // Contrato de ejercicios -> ejercicios con la forma del modo aula (más la solución, que el aula no recibe)
 export const aVistaPrevia = (ejercicios) =>
   ejercicios.map((e) => {
-    const base = { id: e.id, consigna: e.consigna, objetivo: e.objetivo, pista: e.pista };
+    const base = { id: e.id, consigna: e.consigna, objetivo: e.objetivo, icono: e.icono, pista: e.pista };
     return e.opciones
       ? { ...base, tipo: "seleccionar_opcion", opciones: mezclar(e.opciones), respuesta: e.respuestaCorrectaId }
       : { ...base, tipo: "ordenar_silabas", piezas: mezclarPiezas(e.piezas, e.ordenCorrecto), respuesta: e.ordenCorrecto };

@@ -3,18 +3,21 @@
 
 export const GRADOS = ["1.º EGB", "2.º EGB", "3.º EGB"];
 export const FRANJAS_EDAD = [5, 6, 7];
-// El servidor habilita 10 ejercicios solo con PERMITIR_10_EJERCICIOS; la primera versión usa 5
-export const CANTIDADES_EJERCICIOS = [5];
+export const CANTIDADES_EJERCICIOS = [5, 10];
 
 export const HABILIDADES = {
   vocales: { texto: "Vocales", mecanica: "seleccionar_opcion", mecanicaTexto: "Elegir la respuesta" },
-  palabras_silabas: { texto: "Palabras con sílabas", mecanica: "ordenar_silabas", mecanicaTexto: "Ordenar sílabas" }
+  palabras_silabas: { texto: "Palabras con sílabas", mecanica: "ordenar_silabas", mecanicaTexto: "Ordenar sílabas" },
+  completar_silaba: { texto: "Completar la sílaba", mecanica: "seleccionar_opcion", mecanicaTexto: "Elegir la sílaba que falta" },
+  contar_silabas: { texto: "Contar sílabas", mecanica: "seleccionar_opcion", mecanicaTexto: "Elegir cuántas sílabas tiene" }
 };
 
 export const TEMATICAS = {
   animales: "Animales",
   objetos_cotidianos: "Objetos de casa",
-  naturaleza: "Naturaleza"
+  naturaleza: "Naturaleza",
+  cuerpo: "Cuerpo humano",
+  escuela: "Escuela"
 };
 
 export const ESTADOS_JUEGO = {

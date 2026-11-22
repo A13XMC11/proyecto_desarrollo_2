@@ -32,6 +32,7 @@ const EjercicioSchema = new Schema(
     pista: { type: String, trim: true, maxlength: 100 },
     objetivo: { type: String, trim: true },
     recursoId: { type: String, trim: true },
+    icono: { type: String, trim: true, maxlength: 12 },
     // seleccionar_opcion
     opciones: { type: [OpcionSchema], default: undefined },
     respuestaCorrectaId: { type: String, trim: true },

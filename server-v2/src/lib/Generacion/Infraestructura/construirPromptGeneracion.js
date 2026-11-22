@@ -2,6 +2,15 @@ const VOCALES = ["a", "e", "i", "o", "u"];
 // Mismos máximos que la entidad Ejercicio: un texto más largo se pagaría y luego se rechazaría
 const MAX_CONSIGNA = 140;
 const MAX_PISTA = 100;
+// Las palabras del catálogo tienen como máximo 4 sílabas: índices de 0 a 3
+const MAX_INDICE_SILABA = 3;
+
+const NOMBRES_HABILIDAD = {
+  vocales: "reconocimiento de vocales",
+  palabras_silabas: "formación de palabras con sílabas",
+  completar_silaba: "completar la sílaba que falta en una palabra",
+  contar_silabas: "contar las sílabas de una palabra"
+};
 
 const SISTEMA = [
   "Eres un asistente que redacta ejercicios de lectoescritura inicial en español para niños de primeros grados.",
@@ -13,7 +22,7 @@ const SISTEMA = [
 
 // Esquema (JSON Schema) de lo que el modelo debe devolver. Es deliberadamente más pequeño que el contrato del
 // ejercicio: la IA elige el recurso y redacta; el servidor arma ids, opciones, piezas y la palabra objetivo.
-function esquemaRespuesta(mecanica, cantidad, idsRecursos) {
+function esquemaRespuesta(habilidad, cantidad, idsRecursos) {
   const textoDe = (maxLength) => ({ type: "string", minLength: 1, maxLength });
   const recursoId = { type: "string", enum: idsRecursos };
   const ejercicioVocales = {
@@ -31,13 +40,36 @@ function esquemaRespuesta(mecanica, cantidad, idsRecursos) {
     properties: { palabraId: recursoId, consigna: textoDe(MAX_CONSIGNA) },
     required: ["palabraId", "consigna"]
   };
+  // Completar: la IA elige la palabra y qué sílaba falta; las opciones las arma el servidor
+  const ejercicioCompletar = {
+    type: "object",
+    properties: {
+      recursoId,
+      indiceFaltante: { type: "integer", minimum: 0, maximum: MAX_INDICE_SILABA },
+      consigna: textoDe(MAX_CONSIGNA),
+      pista: textoDe(MAX_PISTA)
+    },
+    required: ["recursoId", "indiceFaltante", "consigna"]
+  };
+  // Contar: la IA solo elige la palabra y redacta; el número lo calcula el servidor
+  const ejercicioContar = {
+    type: "object",
+    properties: { recursoId, consigna: textoDe(MAX_CONSIGNA), pista: textoDe(MAX_PISTA) },
+    required: ["recursoId", "consigna"]
+  };
+  const items = {
+    vocales: ejercicioVocales,
+    palabras_silabas: ejercicioSilabas,
+    completar_silaba: ejercicioCompletar,
+    contar_silabas: ejercicioContar
+  }[habilidad];
   return {
     type: "object",
     properties: {
       titulo: { type: "string", minLength: 3, maxLength: 80 },
       ejercicios: {
         type: "array",
-        items: mecanica === "seleccionar_opcion" ? ejercicioVocales : ejercicioSilabas,
+        items,
         minItems: cantidad,
         maxItems: cantidad
       }
@@ -51,12 +83,17 @@ const describirRecurso = (r) => `- ${r.id}: "${r.palabra}" (sílabas: ${r.silaba
 
 // Arma la instrucción de sistema y el mensaje de usuario. Recibe la solicitud ya validada y limitada por el
 // servidor: nada que identifique a docentes ni a estudiantes.
-function construirPromptGeneracion({ habilidad, mecanica, tematica, cantidad, franjaEdad, instruccion, recursos }) {
-  const tarea = habilidad === "vocales"
-    ? `Cada ejercicio muestra una palabra (recursoId) y el niño debe elegir con qué vocal empieza. Por ejercicio entrega exactamente 3 vocales distintas en "vocalesOpciones", y una de ellas DEBE ser la vocal inicial de la palabra. Usa palabras distintas en cada ejercicio mientras haya recursos suficientes.`
-    : `Cada ejercicio muestra una palabra (palabraId) cuyas sílabas el niño debe ordenar. Usa palabras distintas en cada ejercicio mientras haya recursos suficientes.`;
+const TAREAS = {
+  vocales: `Cada ejercicio muestra una palabra (recursoId) y el niño debe elegir con qué vocal empieza. Por ejercicio entrega exactamente 3 vocales distintas en "vocalesOpciones", y una de ellas DEBE ser la vocal inicial de la palabra. Usa palabras distintas en cada ejercicio mientras haya recursos suficientes.`,
+  palabras_silabas: `Cada ejercicio muestra una palabra (palabraId) cuyas sílabas el niño debe ordenar. Usa palabras distintas en cada ejercicio mientras haya recursos suficientes.`,
+  completar_silaba: `Cada ejercicio muestra una palabra (recursoId) con UNA sílaba oculta y el niño elige la que falta. Indica en "indiceFaltante" la posición de la sílaba oculta, contando desde 0 sobre las sílabas del recurso (en "a-be-ja", 0 es "a" y 2 es "ja"). Varía la posición entre ejercicios y usa palabras distintas mientras haya recursos suficientes. No escribas las sílabas ni las opciones: las arma el sistema. La consigna y la pista no deben nombrar la palabra completa.`,
+  contar_silabas: `Cada ejercicio muestra una palabra (recursoId) y el niño debe decir cuántas sílabas tiene. No escribas el número ni las opciones: las calcula el sistema. La consigna y la pista no deben nombrar la palabra ni la cantidad de sílabas. Usa palabras distintas en cada ejercicio mientras haya recursos suficientes.`
+};
+
+function construirPromptGeneracion({ habilidad, tematica, cantidad, franjaEdad, instruccion, recursos }) {
+  const tarea = TAREAS[habilidad];
   const lineas = [
-    `Crea una actividad de ${habilidad === "vocales" ? "reconocimiento de vocales" : "formación de palabras con sílabas"} sobre la temática "${tematica}".`,
+    `Crea una actividad de ${NOMBRES_HABILIDAD[habilidad]} sobre la temática "${tematica}".`,
     `Cantidad de ejercicios: exactamente ${cantidad}.`,
     franjaEdad ? `Franja de edad: ${franjaEdad} años.` : null,
     tarea,
@@ -66,7 +103,7 @@ function construirPromptGeneracion({ habilidad, mecanica, tematica, cantidad, fr
   // Sin < ni >, la instrucción no puede cerrar su propio bloque ni imitar otras etiquetas
   const segura = typeof instruccion === "string" ? instruccion.replace(/[<>]/g, " ").trim() : "";
   if (segura) lineas.push("<instruccion_docente>", segura, "</instruccion_docente>");
-  return { sistema: SISTEMA, usuario: lineas.join("\n"), esquema: esquemaRespuesta(mecanica, cantidad, recursos.map((r) => r.id)) };
+  return { sistema: SISTEMA, usuario: lineas.join("\n"), esquema: esquemaRespuesta(habilidad, cantidad, recursos.map((r) => r.id)) };
 }
 
 module.exports = { construirPromptGeneracion, esquemaRespuesta, MAX_CONSIGNA, MAX_PISTA };

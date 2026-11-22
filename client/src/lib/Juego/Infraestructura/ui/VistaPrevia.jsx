@@ -4,6 +4,7 @@ import { Boton } from "../../../../Infraestructura/ui/componentes";
 import { Dialogo } from "../../../../Infraestructura/ui/Dialogo";
 import { SelectOption } from "../../../Partida/Infraestructura/ui/mecanicas/SelectOption";
 import { OrderSyllables } from "../../../Partida/Infraestructura/ui/mecanicas/OrderSyllables";
+import { ObjetivoGrande } from "../../../Partida/Infraestructura/ui/ObjetivoGrande";
 import { MAXIMO_INTENTOS, aVistaPrevia, esCorrecta } from "../../Dominio/VistaPrevia";
 
 // Las mismas mecánicas del modo aula, para que el docente vea exactamente lo que verá el estudiante
@@ -67,9 +68,7 @@ const Contenido = ({ ejercicios }) => {
 
       <section ref={seccion} key={`${ejercicio.id}-${indice}`} className="animate-aparecer rounded-[2rem] bg-white p-5 ring-1 ring-marca-100 sm:p-8" aria-labelledby="previa-consigna">
         <p id="previa-consigna" className="text-center text-xl text-tenue sm:text-2xl">{ejercicio.consigna}</p>
-        {ejercicio.objetivo && ejercicio.tipo === "seleccionar_opcion" && (
-          <p className="my-6 text-center font-titulo text-6xl font-black tracking-wide text-marca-900 sm:text-7xl">{ejercicio.objetivo}</p>
-        )}
+        {ejercicio.tipo === "seleccionar_opcion" && <ObjetivoGrande objetivo={ejercicio.objetivo} icono={ejercicio.icono} tamano="sm:text-7xl" />}
         <div className={ejercicio.tipo === "ordenar_silabas" ? "mt-8" : ""}>
           <Mecanica ejercicio={ejercicio} resultado={resultado} bloqueado={fase !== "respondiendo"} alElegir={responder} alEnviar={responder} />
         </div>

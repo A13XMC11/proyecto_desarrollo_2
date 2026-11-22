@@ -23,6 +23,17 @@ function textoPlano(valor, campo, { min = 0, max, requerido = false } = {}) {
   return texto;
 }
 
+// Icono de un recurso o ejercicio: uno o varios emojis, nunca texto. Es un carácter de texto, sin archivos ni permisos de uso.
+const ES_ICONO = /^\p{Extended_Pictographic}[\p{Extended_Pictographic}\uFE0F\u200D]*$/u;
+
+function icono(valor, campo) {
+  if (valor === undefined || valor === null || valor === "") return undefined;
+  if (typeof valor !== "string" || valor.length > 12 || !ES_ICONO.test(valor)) {
+    throw new EntradaInvalida(`${campo} debe ser un emoji`);
+  }
+  return valor;
+}
+
 function enumerado(valor, permitidos, campo, { requerido = true } = {}) {
   if ((valor === undefined || valor === null) && !requerido) return undefined;
   if (!permitidos.includes(valor)) {
@@ -68,4 +79,4 @@ function fusionarCambios(actual, cambios, campos) {
   return { datos, escritura };
 }
 
-module.exports = { textoPlano, enumerado, identificador, entero, fechaOpcional, fusionarCambios };
+module.exports = { textoPlano, enumerado, icono, identificador, entero, fechaOpcional, fusionarCambios };

@@ -12,7 +12,7 @@ const solicitud = (habilidad, tematica, cantidad = 5) =>
   ({ habilidad, mecanica: COMPATIBILIDAD[habilidad], tematica, cantidad, recursos: catalogo.listar({ tematica }) });
 
 describe("GeneradorContenidoFalso", () => {
-  for (const habilidad of ["vocales", "palabras_silabas"]) {
+  for (const habilidad of ["vocales", "palabras_silabas", "completar_silaba", "contar_silabas"]) {
     for (const tematica of TEMATICAS) {
       it(`${habilidad} / ${tematica}: produce una actividad que pasa la validación pedagógica`, async () => {
         const { titulo, ejercicios, uso } = await generador.generar(solicitud(habilidad, tematica));
@@ -28,6 +28,46 @@ describe("GeneradorContenidoFalso", () => {
       });
     }
   }
+
+  it("los ejercicios llevan el icono de su palabra", async () => {
+    for (const habilidad of ["vocales", "palabras_silabas", "completar_silaba", "contar_silabas"]) {
+      const { ejercicios } = await generador.generar(solicitud(habilidad, "animales"));
+      assert.ok(ejercicios.every((e) => e.icono), habilidad);
+    }
+  });
+
+  it("completar y contar funcionan también con 10 ejercicios", async () => {
+    for (const habilidad of ["completar_silaba", "contar_silabas"]) {
+      const { ejercicios } = await generador.generar(solicitud(habilidad, "escuela", 10));
+      const version = new VersionJuego({
+        juegoId: "j1", ejercicios,
+        configuracion: { habilidad, mecanica: "seleccionar_opcion", tematica: "escuela", cantidadEjercicios: 10 }
+      });
+      assert.doesNotThrow(() => version.validarContenido(catalogo, { permitirDiez: true }), habilidad);
+    }
+  });
+
+  it("completar: el hueco recorre las posiciones y la respuesta es la sílaba aprobada", async () => {
+    const { ejercicios } = await generador.generar(solicitud("completar_silaba", "animales"));
+    const huecos = ejercicios.map((e) => e.objetivo.split(" ").indexOf("__"));
+    assert.ok(new Set(huecos).size > 1, "el hueco no siempre está en el mismo lugar");
+    for (const e of ejercicios) {
+      const correcta = e.opciones.find((o) => o.id === e.respuestaCorrectaId).texto;
+      assert.equal(e.objetivo.replace("__", correcta).replaceAll(" ", ""), catalogo.obtenerRecurso(e.recursoId).palabra);
+    }
+  });
+
+  it("completar: las opciones falsas nunca son sílabas que ya se ven en la palabra", async () => {
+    for (const tematica of TEMATICAS) {
+      const { ejercicios } = await generador.generar(solicitud("completar_silaba", tematica, 10));
+      for (const e of ejercicios) {
+        const visibles = e.objetivo.split(" ").filter((p) => p !== "__");
+        const textos = e.opciones.map((o) => o.texto);
+        assert.equal(textos.filter((t) => visibles.includes(t)).length, 0, `${e.objetivo} / ${textos}`);
+        assert.equal(new Set(textos).size, 3);
+      }
+    }
+  });
 
   it("es determinista: la misma solicitud da la misma actividad", async () => {
     const a = await generador.generar(solicitud("vocales", "animales"));

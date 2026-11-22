@@ -173,8 +173,10 @@ describe("CRUD HTTP sobre MongoDB", () => {
     assert.equal((await llamar(`${ruta}/${copia.cuerpo.id}/aprobar`, { metodo: "POST", docente: esc.docente })).status, 200);
 
     const diez = await llamar(ruta, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 10, ejercicios: [] } });
-    assert.equal(diez.status, 400, "10 ejercicios no están habilitados");
-    assert.match(JSON.stringify(diez.cuerpo), /10 ejercicios/);
+    assert.equal(diez.status, 201, "desde el sprint 7 los 10 ejercicios vienen habilitados");
+    assert.equal(diez.cuerpo.configuracion.cantidadEjercicios, 10);
+    const siete = await llamar(ruta, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 7, ejercicios: [] } });
+    assert.equal(siete.status, 400, "otras cantidades no existen");
   });
 
   prueba("partidas: iniciar, pistas, intentos evaluados en el servidor, finalizar y abandonar", async () => {

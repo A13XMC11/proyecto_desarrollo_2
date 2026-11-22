@@ -35,7 +35,7 @@ Cada docente tiene un **cupo diario** de generaciones (se muestra «Cupo de hoy�
 Si la generación está desactivada, la pantalla lo avisa y puede **crear la actividad a mano**.
 
 ### b) A mano (Mis actividades → Crear a mano)
-Escriba el título, elija curso, habilidad y temática, y pulse **Crear y escribir ejercicios**. Cada ejercicio usa una **palabra del catálogo** revisado; el sistema calcula las sílabas y las opciones.
+Escriba el título, elija curso, habilidad y temática, y pulse **Crear y escribir ejercicios**. Cada ejercicio usa una **palabra del catálogo** revisado; el sistema calcula las sílabas y las opciones. Hay cuatro habilidades: **vocales**, **palabras con sílabas** (ordenar), **completar la sílaba** (falta una sílaba de la palabra) y **contar sílabas**. Puede pedir 5 o 10 ejercicios, y la mayoría de las palabras se muestra con un **icono** para quien aún no lee con soltura.
 
 ### Revisar y aprobar un borrador
 En la página de la actividad:

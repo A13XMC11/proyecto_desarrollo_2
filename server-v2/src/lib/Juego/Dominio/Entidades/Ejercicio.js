@@ -1,5 +1,5 @@
 const EntradaInvalida = require("../../../Compartido/Dominio/Errores/EntradaInvalida");
-const { textoPlano, identificador } = require("../../../Compartido/Dominio/Validaciones");
+const { textoPlano, identificador, icono: validarIcono } = require("../../../Compartido/Dominio/Validaciones");
 
 function unicos(lista, campo) {
   if (new Set(lista).size !== lista.length) throw new EntradaInvalida(`${campo} con ids repetidos`);
@@ -7,7 +7,7 @@ function unicos(lista, campo) {
 
 class Ejercicio {
   constructor({
-    id, consigna, pista, objetivo, recursoId, opciones, respuestaCorrectaId,
+    id, consigna, pista, objetivo, recursoId, icono, opciones, respuestaCorrectaId,
     palabraId, piezas, ordenCorrecto
   }) {
     this.id = identificador(id, "ejercicio.id");
@@ -15,6 +15,8 @@ class Ejercicio {
     this.pista = textoPlano(pista, "pista", { max: 100 });
     this.objetivo = textoPlano(objetivo, "objetivo", { max: 40 });
     this.recursoId = identificador(recursoId, "recursoId", { requerido: false });
+    // Emoji de la palabra, para los niños que aún no leen con soltura; debe ser el del recurso (lo comprueba la validación pedagógica)
+    this.icono = validarIcono(icono, "icono");
 
     if (opciones !== undefined) {
       if (!Array.isArray(opciones)) throw new EntradaInvalida("opciones inválidas");

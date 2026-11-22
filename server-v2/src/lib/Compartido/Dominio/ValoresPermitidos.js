@@ -4,15 +4,17 @@
 const GRADOS = ["1.º EGB", "2.º EGB", "3.º EGB"];
 const FRANJAS_EDAD = [5, 6, 7];
 
-const HABILIDADES = ["vocales", "palabras_silabas"];
+const HABILIDADES = ["vocales", "palabras_silabas", "completar_silaba", "contar_silabas"];
 const MECANICAS = ["seleccionar_opcion", "ordenar_silabas"];
-const TEMATICAS = ["animales", "objetos_cotidianos", "naturaleza"];
+const TEMATICAS = ["animales", "objetos_cotidianos", "naturaleza", "cuerpo", "escuela"];
 const CANTIDADES_EJERCICIOS = [5, 10];
 
 // Compatibilidad habilidad -> mecánica
 const COMPATIBILIDAD = {
   vocales: "seleccionar_opcion",
-  palabras_silabas: "ordenar_silabas"
+  palabras_silabas: "ordenar_silabas",
+  completar_silaba: "seleccionar_opcion",
+  contar_silabas: "seleccionar_opcion"
 };
 
 const ORIGENES_JUEGO = ["ia", "manual"];
