@@ -12,7 +12,10 @@
     "test": "node --env-file-if-exists=.env --test --test-concurrency=1 \"tests/**/*.test.js\"",
     "medir:generacion": "node --env-file-if-exists=.env scripts/medirGeneracion.js",
     "medir:rendimiento": "node --env-file-if-exists=.env scripts/medirRendimiento.js",
-    "verificar:despliegue": "node scripts/verificarDespliegue.js"
+    "verificar:despliegue": "node scripts/verificarDespliegue.js",
+    "sembrar:demo": "node scripts/sembrarDemo.js",
+    "probar:respaldo": "node --env-file-if-exists=.env scripts/probarRespaldo.js",
+    "revisar:configuracion": "node scripts/revisarConfiguracion.js"
   },
   "author": "",
   "license": "ISC",

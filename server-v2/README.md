@@ -224,3 +224,21 @@ erDiagram
 
 Entre PostgreSQL y MongoDB no hay claves foráneas ni transacciones: la existencia y pertenencia de los ids se comprueba en `Aplicacion`
 (por ejemplo `CrearJuego` verifica que el curso sea del docente) y el flujo generación → juego se recupera con un caso de uso de conciliación (pendiente).
+
+## Documentación y herramientas
+
+Guías en [`docs/`](docs/) y comandos en `scripts/` (sprints 4 a 6):
+
+| Documento | Para qué |
+|---|---|
+| [instalacion.md](docs/instalacion.md) | Instalar, configurar, ejecutar y probar (verificado en un clon limpio) |
+| [arquitectura.md](docs/arquitectura.md) | Diagramas: componentes, capas, sesión, generación con IA |
+| [manual-docente.md](docs/manual-docente.md) | Manual de uso para la persona docente |
+| [guion-demostracion.md](docs/guion-demostracion.md) | Demostración de ~10 min con datos ficticios (`npm run sembrar:demo`) |
+| [generacion-ia.md](docs/generacion-ia.md) | Prompt, esquema, medición y autorización de la IA |
+| [despliegue.md](docs/despliegue.md) | Publicar y verificar (`npm run verificar:despliegue`) |
+| [recuperacion.md](docs/recuperacion.md) | Esquema sin migraciones, respaldo y restauración, secretos (`npm run probar:respaldo`, `npm run revisar:configuracion`) |
+| [aceptacion.md](docs/aceptacion.md) | Resultados contra los criterios de cierre del sprint 6 |
+| [informe-rendimiento.md](docs/informe-rendimiento.md) | Rendimiento y capacidad medidos (`npm run medir:rendimiento`) |
+| [limites-y-problemas-conocidos.md](docs/limites-y-problemas-conocidos.md) | Límites, consumo observado y problemas conocidos |
+| [datos-estudiantes.md](docs/datos-estudiantes.md) · [prueba-piloto.md](docs/prueba-piloto.md) | Decisión sobre datos de estudiantes y guion de la prueba piloto |
