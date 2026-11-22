@@ -1,12 +1,10 @@
-import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BarChart3, Play } from "lucide-react";
 import { BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector, Tarjeta } from "../../../../Infraestructura/ui/componentes";
 import { useConsulta } from "../../../../Infraestructura/http/useConsulta";
 import { useCursos, useEstudiantes } from "../../../Aula/Aplicacion/useAula";
-import { JuegoApiHttp } from "../../../Juego/Infraestructura/JuegoApiHttp";
 import { HABILIDADES, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
-import { indicadoresAgregados, indicadoresDePartida, porcentaje } from "../../Dominio/Indicadores";
+import { fraccion, porcentaje } from "../../Dominio/Indicadores";
 import { PartidaApiHttp } from "../PartidaApiHttp";
 
 const ESTADOS = { en_curso: { texto: "En curso", tono: "azul" }, finalizada: { texto: "Terminada", tono: "verde" }, abandonada: { texto: "Abandonada", tono: "gris" } };
@@ -21,6 +19,13 @@ const Indicador = ({ titulo, n, d, ayuda }) => (
   </Tarjeta>
 );
 
+const Celda = ({ children, className = "" }) => <td className={`px-4 py-3 tabular-nums ${className}`}>{children}</td>;
+const Encabezados = ({ columnas }) => (
+  <thead className="border-b border-borde bg-fondo text-tenue">
+    <tr>{columnas.map((c) => <th key={c} scope="col" className="px-4 py-3 font-medium">{c}</th>)}</tr>
+  </thead>
+);
+
 export const PaginaResultados = () => {
   const [parametros, setParametros] = useSearchParams();
   const cursoId = parametros.get("curso") || "";
@@ -30,10 +35,10 @@ export const PaginaResultados = () => {
 
   const cursos = useCursos();
   const estudiantes = useEstudiantes({ cursoId });
-  const juegos = useConsulta(() => JuegoApiHttp.listar({ incluirArchivados: "true", limite: 50 }), []);
-  const partidas = useConsulta(
-    () => PartidaApiHttp.listar({ cursoId: cursoId || undefined, estudianteId: estudianteId || undefined, habilidad: habilidad || undefined }),
-    [cursoId, estudianteId, habilidad]
+  // Todo se filtra y se calcula en el servidor
+  const resultados = useConsulta(
+    () => PartidaApiHttp.resultados({ cursoId, estudianteId, habilidad, juegoId }),
+    [cursoId, estudianteId, habilidad, juegoId]
   );
 
   const cambiar = (clave, valor) => {
@@ -44,14 +49,13 @@ export const PaginaResultados = () => {
     setParametros(nuevos);
   };
 
-  const lista = useMemo(
-    () => (partidas.datos || []).filter((p) => !juegoId || p.juegoId === juegoId).sort((a, b) => new Date(b.iniciadaEn || b.creadoEn) - new Date(a.iniciadaEn || a.creadoEn)),
-    [partidas.datos, juegoId]
-  );
-  const total = indicadoresAgregados(lista);
-  const tituloDe = (id) => juegos.datos?.items.find((j) => j.id === id)?.titulo || "Actividad";
+  const datos = resultados.datos;
+  const partidas = datos?.partidas || [];
+  const total = datos?.resumen;
   const estudianteDe = (id) => estudiantes.datos?.find((e) => e.id === id);
-  const juegoFiltrado = juegoId && juegos.datos?.items.find((j) => j.id === juegoId);
+  const tituloFiltrado = juegoId && partidas.find((p) => p.juegoId === juegoId)?.titulo;
+  // La tabla por estudiante tiene sentido dentro de un curso (los nombres salen de su lista)
+  const porEstudiante = cursoId && !estudianteId ? datos?.porEstudiante || [] : [];
 
   return (
     <>
@@ -63,25 +67,30 @@ export const PaginaResultados = () => {
         <Selector etiqueta="Estudiante" value={estudianteId} disabled={!cursoId} onChange={(e) => cambiar("estudiante", e.target.value)} opciones={[{ valor: "", texto: cursoId ? "Todos" : "Elige un curso primero" }, ...(estudiantes.datos || []).map((e) => ({ valor: e.id, texto: nombreEstudiante(e) }))]} />
         <Selector etiqueta="Habilidad" value={habilidad} onChange={(e) => cambiar("habilidad", e.target.value)} opciones={[{ valor: "", texto: "Todas" }, ...opcionesDe(HABILIDADES)]} />
       </div>
-      {juegoFiltrado && (
+      {juegoId && (
         <p className="mb-4 flex flex-wrap items-center gap-2 text-sm text-tenue">
-          Mostrando solo <strong className="text-tinta">{juegoFiltrado.titulo}</strong>
+          Mostrando solo <strong className="text-tinta">{tituloFiltrado || "una actividad"}</strong>
           <button type="button" className="cursor-pointer font-medium text-marca-700 underline underline-offset-2" onClick={() => cambiar("juego", "")}>Ver todas</button>
         </p>
       )}
 
-      <MensajeError error={partidas.error} alReintentar={partidas.recargar} />
+      <MensajeError error={resultados.error} alReintentar={resultados.recargar} />
 
-      {partidas.cargando && !partidas.datos ? (
+      {resultados.cargando && !datos ? (
         <Cargando filas={3} />
-      ) : !partidas.datos ? null : lista.length === 0 ? (
+      ) : !datos ? null : partidas.length === 0 ? (
         <EstadoVacio icono={BarChart3} titulo="Todavía no hay partidas" texto="Cuando tus estudiantes jueguen una actividad en el aula, sus resultados aparecerán aquí." accion={<BotonEnlace to="/panel/actividades"><Play className="size-5" aria-hidden="true" /> Ir a mis actividades</BotonEnlace>} />
       ) : (
         <>
-          <h2 className="mb-3 text-lg font-extrabold">Resumen de {total.partidas} {total.partidas === 1 ? "partida terminada" : "partidas terminadas"}</h2>
-          <div className="mb-8 grid gap-4 sm:grid-cols-3">
+          <h2 className="mb-1 text-lg font-extrabold">Resumen de {total.partidas} {total.partidas === 1 ? "partida terminada" : "partidas terminadas"}</h2>
+          <p className="mb-3 text-sm text-tenue">
+            Solo cuentan las partidas terminadas.
+            {(total.enCurso > 0 || total.abandonadas > 0) && ` Aparte: ${total.enCurso} en curso y ${total.abandonadas} abandonadas.`}
+          </p>
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <Indicador titulo="Aciertos al primer intento" n={total.primerIntento} d={total.respondidos} ayuda="Aún no hay partidas terminadas." />
             <Indicador titulo="Resueltos sin pista" n={total.sinAyuda} d={total.respondidos} ayuda="Aún no hay partidas terminadas." />
+            <Indicador titulo="Ejercicios completados" n={total.completados} d={total.disponibles} ayuda="Aún no hay partidas terminadas." />
             <Tarjeta>
               <p className="text-sm font-medium text-tenue">Intentos registrados</p>
               <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{total.intentosTotales}</p>
@@ -89,33 +98,53 @@ export const PaginaResultados = () => {
             </Tarjeta>
           </div>
 
-          <h2 className="mb-3 text-lg font-extrabold">Partidas</h2>
-          <div className="overflow-x-auto rounded-2xl border border-borde bg-white">
-            <table className="w-full min-w-[40rem] text-left text-sm">
-              <thead className="border-b border-borde bg-fondo text-tenue">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">Actividad</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Estudiante</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Fecha</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Primer intento</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Pistas</th>
-                  <th scope="col" className="px-4 py-3 font-medium">Estado</th>
-                </tr>
-              </thead>
+          {porEstudiante.length > 0 && (
+            <section className="mb-8" aria-labelledby="titulo-por-estudiante">
+              <h2 id="titulo-por-estudiante" className="mb-3 text-lg font-extrabold">Por estudiante</h2>
+              {/* Enfocable: en pantallas angostas la tabla se desplaza y con teclado también debe poder hacerlo */}
+              <div tabIndex={0} role="region" aria-labelledby="titulo-por-estudiante" className="overflow-x-auto rounded-2xl border border-borde bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-500">
+                <table className="w-full min-w-[36rem] text-left text-sm">
+                  <Encabezados columnas={["Estudiante", "Partidas", "Primer intento", "Sin pista", "Completados"]} />
+                  <tbody className="divide-y divide-borde">
+                    {porEstudiante.map((g) => {
+                      const est = estudianteDe(g.estudianteId);
+                      return (
+                        <tr key={g.estudianteId}>
+                          <td className="px-4 py-3 font-medium">
+                            {est ? <button type="button" className="cursor-pointer hover:text-marca-700 hover:underline" onClick={() => cambiar("estudiante", g.estudianteId)}>{nombreEstudiante(est)}</button> : "Estudiante"}
+                          </td>
+                          <Celda>{g.partidas}</Celda>
+                          <Celda>{fraccion(g.primerIntento, g.respondidos)}</Celda>
+                          <Celda>{fraccion(g.sinAyuda, g.respondidos)}</Celda>
+                          <Celda>{fraccion(g.completados, g.disponibles)}</Celda>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          <h2 id="titulo-partidas" className="mb-3 text-lg font-extrabold">Partidas</h2>
+          <div tabIndex={0} role="region" aria-labelledby="titulo-partidas" className="overflow-x-auto rounded-2xl border border-borde bg-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-500">
+            <table className="w-full min-w-[44rem] text-left text-sm">
+              <Encabezados columnas={["Actividad", "Estudiante", "Fecha", "Primer intento", "Completados", "Pistas", "Estado"]} />
               <tbody className="divide-y divide-borde">
-                {lista.map((p) => {
-                  const ind = indicadoresDePartida(p);
+                {partidas.map((p) => {
+                  const ind = p.indicadores;
                   const est = estudianteDe(p.estudianteId);
                   const estado = ESTADOS[p.estado];
                   return (
                     <tr key={p.id}>
                       <td className="px-4 py-3 font-medium">
-                        <Link to={`/panel/actividades/${p.juegoId}`} className="hover:text-marca-700 hover:underline">{tituloDe(p.juegoId)}</Link>
+                        <Link to={`/panel/actividades/${p.juegoId}`} className="hover:text-marca-700 hover:underline">{p.titulo || "Actividad"}</Link>
                       </td>
                       <td className="px-4 py-3">{est ? nombreEstudiante(est) : <span className="text-tenue">Elige el curso para ver nombres</span>}</td>
-                      <td className="px-4 py-3 tabular-nums text-tenue">{new Date(p.iniciadaEn || p.creadoEn).toLocaleDateString("es-EC", { day: "numeric", month: "short" })}</td>
-                      <td className="px-4 py-3 tabular-nums">{ind.respondidos ? `${ind.primerIntento} de ${ind.respondidos}` : "Sin respuestas"}</td>
-                      <td className="px-4 py-3 tabular-nums">{ind.pistas}</td>
+                      <Celda className="text-tenue">{new Date(p.iniciadaEn).toLocaleDateString("es-EC", { day: "numeric", month: "short" })}</Celda>
+                      <Celda>{fraccion(ind.primerIntento, ind.respondidos)}</Celda>
+                      <Celda>{fraccion(ind.completados, ind.disponibles, "–")}</Celda>
+                      <Celda>{ind.pistas}</Celda>
                       <td className="px-4 py-3">
                         {p.estado === "en_curso" ? (
                           <Link to={`/aula/partida/${p.id}`} className="font-medium text-marca-700 underline underline-offset-2">Continuar</Link>

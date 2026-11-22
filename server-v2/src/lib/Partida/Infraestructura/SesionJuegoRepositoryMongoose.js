@@ -1,3 +1,4 @@
+const { Types } = require("mongoose");
 const SesionJuego = require("../Dominio/Entidades/SesionJuego");
 const SesionJuegoModel = require("./SesionJuegoModel");
 const ConflictoDeEstado = require("../../Compartido/Dominio/Errores/ConflictoDeEstado");
@@ -134,13 +135,17 @@ class SesionJuegoRepositoryMongoose {
 
   // Rango [desde, hasta) sobre creadoEn. La habilidad se resuelve con $lookup a
   // versionesJuego (por nombre de colección, sin importar el modelo de otro módulo).
-  async findByFiltros(docenteId, { cursoId, estudianteId, habilidad, desde, hasta, estado } = {}) {
+  async findByFiltros(docenteId, { cursoId, estudianteId, juegoId, habilidad, desde, hasta, estado } = {}) {
     if (!esUuid(docenteId)) return [];
     const match = { docenteId };
     for (const [campo, valor] of [["cursoId", cursoId], ["estudianteId", estudianteId]]) {
       if (valor === undefined) continue;
       if (!esUuid(valor)) return [];
       match[campo] = valor;
+    }
+    if (juegoId !== undefined) {
+      if (!esObjectId(juegoId)) return [];
+      match.juegoId = new Types.ObjectId(juegoId);
     }
     if (typeof estado === "string") match.estado = estado;
     if (desde || hasta) {
@@ -178,6 +183,15 @@ class SesionJuegoRepositoryMongoose {
       .limit(acotar(limite, 10))
       .lean();
     return docs.map((doc) => this.aEntidad(doc));
+  }
+
+  // Conteo sin traer documentos (usa el índice que empieza por docenteId)
+  async contar(docenteId, { estado, desde } = {}) {
+    if (!esUuid(docenteId)) return 0;
+    const filtro = { docenteId };
+    if (typeof estado === "string") filtro.estado = estado;
+    if (desde instanceof Date && !Number.isNaN(desde.getTime())) filtro.creadoEn = { $gte: desde };
+    return SesionJuegoModel.countDocuments(filtro);
   }
 
   async listarEnCurso(docenteId, limite = 10) {

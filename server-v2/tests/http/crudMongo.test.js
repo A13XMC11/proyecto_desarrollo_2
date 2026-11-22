@@ -329,4 +329,98 @@ describe("CRUD HTTP sobre MongoDB", () => {
     assert.equal((await llamar("/api/interacciones", { docente: esc.docente })).status, 404, "falta la partida");
     assert.equal((await llamar(`/api/interacciones/${creada.cuerpo.id}`, { metodo: "DELETE", docente: esc.docente })).status, 404, "no se elimina");
   });
+
+  prueba("resultados e inicio: calculados en el servidor, solo con partidas propias", async () => {
+    const esc = await escenario();
+    const juego = (await crearJuego(esc)).cuerpo.id;
+    const rutaV = `/api/juegos/${juego}/versiones`;
+    const version = (await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 5, ejercicios: ejercicios(5) } })).cuerpo.id;
+    await llamar(`${rutaV}/${version}/aprobar`, { metodo: "POST", docente: esc.docente });
+
+    // Partida terminada: e1 bien al primer intento, e2 mal y luego bien con pista
+    const partida = (await llamar("/api/partidas", { metodo: "POST", docente: esc.docente, cuerpo: { estudianteId: esc.estudiante, juegoId: juego } })).cuerpo.id;
+    const ruta = `/api/partidas/${partida}`;
+    await llamar(`${ruta}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e1", eleccion: "a", operacionId: "res-1" } });
+    await llamar(`${ruta}/pistas`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e2", operacionId: "res-2" } });
+    await llamar(`${ruta}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e2", eleccion: "a", operacionId: "res-3" } });
+    await llamar(`${ruta}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e2", eleccion: "o", operacionId: "res-4" } });
+    assert.equal((await llamar(`${ruta}/finalizar`, { metodo: "POST", docente: esc.docente })).status, 200);
+
+    const r = await llamar(`/api/resultados?cursoId=${esc.curso}`, { docente: esc.docente });
+    assert.equal(r.status, 200);
+    assert.deepEqual(
+      [r.cuerpo.resumen.partidas, r.cuerpo.resumen.respondidos, r.cuerpo.resumen.primerIntento, r.cuerpo.resumen.sinAyuda, r.cuerpo.resumen.completados, r.cuerpo.resumen.disponibles],
+      [1, 2, 1, 1, 2, 5]
+    );
+    assert.equal(r.cuerpo.partidas[0].titulo, "Las vocales");
+    assert.equal(r.cuerpo.porHabilidad[0].habilidad, "vocales");
+    assert.equal((await llamar(`/api/resultados?juegoId=${juego}`, { docente: esc.docente })).cuerpo.partidas.length, 1);
+    assert.equal((await llamar(`/api/resultados?habilidad=palabras_silabas`, { docente: esc.docente })).cuerpo.partidas.length, 0);
+    assert.equal((await llamar(`/api/resultados?habilidad=otra`, { docente: esc.docente })).status, 400);
+    assert.equal((await llamar(`/api/resultados?cursoId[$ne]=x`, { docente: esc.docente })).status, 200, "los filtros no aceptan operadores");
+    assert.equal((await llamar("/api/resultados", { docente: esc.ajeno })).cuerpo.partidas.length, 0, "otro docente no ve estos resultados");
+
+    const inicio = await llamar("/api/inicio", { docente: esc.docente });
+    assert.equal(inicio.status, 200);
+    assert.equal(inicio.cuerpo.cursosActivos, 1);
+    assert.equal(inicio.cuerpo.actividades.total, 1);
+    assert.equal(inicio.cuerpo.enCurso.total, 0);
+    assert.equal(inicio.cuerpo.terminadasSemana, 1);
+    assert.equal((await llamar("/api/inicio")).status, 401);
+  });
+
+  // Demostración del sprint 5 (§14): versión 2, partidas anteriores intactas, filtros y archivo
+  prueba("versiones y biblioteca: una versión nueva no cambia lo ya jugado; archivar preserva resultados", async () => {
+    const esc = await escenario();
+    const juego = (await crearJuego(esc, { titulo: "Las vocales de los animales" })).cuerpo.id;
+    const rutaV = `/api/juegos/${juego}/versiones`;
+    const v1 = (await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 5, ejercicios: ejercicios(5) } })).cuerpo.id;
+    await llamar(`${rutaV}/${v1}/aprobar`, { metodo: "POST", docente: esc.docente });
+    const consignaV1 = ejercicio(1).consigna;
+
+    // Partida A con la versión 1: se completa y se termina
+    const a = (await llamar("/api/partidas", { metodo: "POST", docente: esc.docente, cuerpo: { estudianteId: esc.estudiante, juegoId: juego } })).cuerpo;
+    assert.equal(a.versionId, v1);
+    await llamar(`/api/partidas/${a.id}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e1", eleccion: "a", operacionId: "ver-1" } });
+    await llamar(`/api/partidas/${a.id}/finalizar`, { metodo: "POST", docente: esc.docente });
+
+    // Versión 2: se edita la consigna del primer ejercicio y se aprueba
+    const editados = ejercicios(5).map((e) => (e.id === "e1" ? { ...e, consigna: "Mira la imagen y elige su primera vocal" } : e));
+    const v2 = (await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 5, ejercicios: editados } })).cuerpo;
+    assert.equal(v2.numero, 2);
+    assert.equal((await llamar(`${rutaV}/${v2.id}/aprobar`, { metodo: "POST", docente: esc.docente })).status, 200);
+    assert.equal((await llamar(`/api/juegos/${juego}`, { docente: esc.docente })).cuerpo.versionActualId, v2.id, "la vigente es la 2");
+
+    // La versión 1 y la partida A no cambian
+    const versionUno = (await llamar(`${rutaV}/${v1}`, { docente: esc.docente })).cuerpo;
+    assert.equal(versionUno.estado, "aprobada");
+    assert.equal(versionUno.ejercicios[0].consigna, consignaV1);
+    const jugadaA = (await llamar(`/api/partidas/${a.id}/jugable`, { docente: esc.docente })).cuerpo;
+    assert.equal(jugadaA.ejercicios[0].consigna, consignaV1, "la partida anterior conserva sus preguntas");
+    assert.equal(jugadaA.ejercicios[0].acertado, true, "y su resultado");
+
+    // Una partida nueva usa el contenido actualizado
+    const b = (await llamar("/api/partidas", { metodo: "POST", docente: esc.docente, cuerpo: { estudianteId: esc.estudiante, juegoId: juego } })).cuerpo;
+    assert.equal(b.versionId, v2.id);
+    assert.equal((await llamar(`/api/partidas/${b.id}/jugable`, { docente: esc.docente })).cuerpo.ejercicios[0].consigna, "Mira la imagen y elige su primera vocal");
+
+    // Biblioteca: búsqueda y filtros por curso, estudiante, habilidad y estado
+    const otro = (await crearJuego(esc, { titulo: "Sílabas para Luis", habilidad: "palabras_silabas", estudianteId: esc.estudiante })).cuerpo.id;
+    const lista = async (consulta) => (await llamar(`/api/juegos?${consulta}`, { docente: esc.docente })).cuerpo.items.map((j) => j.id);
+    assert.deepEqual(await lista("texto=animales"), [juego]);
+    assert.deepEqual(await lista(`cursoId=${esc.curso}&habilidad=palabras_silabas`), [otro]);
+    assert.deepEqual(await lista(`estudianteId=${esc.estudiante}`), [otro]);
+    assert.deepEqual(await lista("estado=listo"), [juego]);
+    assert.deepEqual(await lista("estado=borrador"), [otro]);
+
+    // Archivar: no se inician partidas nuevas, la que estaba en curso se puede terminar y los resultados quedan
+    assert.equal((await llamar(`/api/juegos/${juego}`, { metodo: "DELETE", docente: esc.docente })).status, 204);
+    assert.ok(!(await lista("")).includes(juego), "sale de la biblioteca activa");
+    assert.deepEqual(await lista("estado=archivado&incluirArchivados=true"), [juego]);
+    assert.equal((await llamar("/api/partidas", { metodo: "POST", docente: esc.docente, cuerpo: { estudianteId: esc.estudiante, juegoId: juego } })).status, 409);
+    const intentoB = await llamar(`/api/partidas/${b.id}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId: "e1", eleccion: "a", operacionId: "ver-2" } });
+    assert.equal(intentoB.status, 200, "la partida ya iniciada se puede terminar");
+    const resultados = (await llamar(`/api/resultados?juegoId=${juego}`, { docente: esc.docente })).cuerpo;
+    assert.equal(resultados.partidas.length, 2, "los resultados se conservan");
+  });
 });

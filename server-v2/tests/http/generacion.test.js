@@ -63,7 +63,10 @@ describe("HTTP: generación con IA (generador falso) de la solicitud a la partid
     });
     assert.equal(intento.cuerpo.esCorrecto, true);
     assert.equal((await llamar("/api/cuotas", { docente })).cuerpo.diaria.consumido, 1, "jugar no consume cupo de IA");
-    assert.equal((await llamar("/api/cuotas", { docente })).cuerpo.maximoDiario, 3, "informa el máximo diario configurado");
+    const cuotas = (await llamar("/api/cuotas", { docente })).cuerpo;
+    assert.equal(cuotas.limiteDiario, 3, "informa el límite diario configurado");
+    assert.equal(cuotas.generacionHabilitada, true);
+    assert.match(cuotas.dia, /^\d{4}-\d{2}-\d{2}$/);
   });
 
   prueba("el cupo diario se aplica por HTTP con el código que muestra la pantalla", async () => {

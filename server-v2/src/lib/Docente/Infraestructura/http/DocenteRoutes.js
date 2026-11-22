@@ -5,8 +5,12 @@ const requerirDocente = require("../../../../Infraestructura/http/requerirDocent
 module.exports = function DocenteRoutes(controller) {
   const router = express.Router();
 
-  router.post("/", envolverAsync(controller.registrar)); // el registro es público
-  router.post("/sesion", envolverAsync(controller.sesion)); // iniciar sesión es público
+  router.post("/", envolverAsync(controller.registrar)); // registrarse es público y abre la sesión
+  // Sesión: antes que "/:id" para que "sesion" no se lea como un id
+  router.post("/sesion", envolverAsync(controller.entrar)); // entrar es público
+  router.get("/sesion", requerirDocente, envolverAsync(controller.sesionActual));
+  router.delete("/sesion", requerirDocente, envolverAsync(controller.salir));
+
   router.get("/", requerirDocente, envolverAsync(controller.listar));
   router.get("/:id", requerirDocente, envolverAsync(controller.obtenerPorId));
   router.put("/:id", requerirDocente, envolverAsync(controller.actualizar));

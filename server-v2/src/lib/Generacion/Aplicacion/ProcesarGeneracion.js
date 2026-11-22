@@ -2,6 +2,7 @@ const Juego = require("../../Juego/Dominio/Entidades/Juego");
 const VersionJuego = require("../../Juego/Dominio/Entidades/VersionJuego");
 const EntradaInvalida = require("../../Compartido/Dominio/Errores/EntradaInvalida");
 const ErrorDelGenerador = require("../../Compartido/Dominio/Errores/ErrorDelGenerador");
+const { recursosParaGeneracion } = require("../Dominio/Entidades/RecursosParaGeneracion");
 
 // La versión se valida antes de que exista el juego que la contendrá
 const SIN_JUEGO = "pendiente-de-guardar";
@@ -47,7 +48,7 @@ class ProcesarGeneracion {
       cantidad: parametros.cantidad,
       franjaEdad: estudiante ? estudiante.franjaEdad : undefined,
       instruccion: parametros.instruccion,
-      recursos: this.catalogo.listar({ tematica: parametros.tematica })
+      recursos: recursosParaGeneracion(this.catalogo, parametros)
     };
   }
 

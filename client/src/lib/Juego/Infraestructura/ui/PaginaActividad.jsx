@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Archive, ArchiveRestore, ArrowLeft, BarChart3, CheckCircle2, Eye, FilePlus2, Pencil, Play, Save, Sparkles, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowLeft, BarChart3, CheckCircle2, Eye, FilePlus2, Play, Save, Sparkles, Trash2 } from "lucide-react";
 import { Boton, BotonEnlace, Cargando, Insignia, MensajeError, Tarjeta } from "../../../../Infraestructura/ui/componentes";
 import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { Confirmar } from "../../../Aula/Infraestructura/ui/PaginaCursos";
@@ -9,6 +9,7 @@ import { aContrato, aFormulario, revisar } from "../../Dominio/Ejercicios";
 import { useJuego, useRecursos } from "../../Aplicacion/useJuegos";
 import { JuegoApiHttp } from "../JuegoApiHttp";
 import { EditorEjercicios } from "./EditorEjercicios";
+import { VistaPrevia } from "./VistaPrevia";
 
 // Vista de solo lectura de una versión aprobada (inmutable)
 const VistaVersion = ({ version }) => (
@@ -42,6 +43,45 @@ const VistaVersion = ({ version }) => (
   </ol>
 );
 
+const ESTADOS_VERSION = {
+  aprobada: { texto: "Aprobada", tono: "verde" },
+  borrador: { texto: "Borrador", tono: "ambar" },
+  descartada: { texto: "Descartada", tono: "gris" }
+};
+
+// Historial (S5-01): las versiones aprobadas nunca cambian; cada partida guarda la versión con la que se jugó
+const HistorialVersiones = ({ versiones, vigenteId, alVer }) => (
+  <section className="mt-10" aria-labelledby="titulo-historial">
+    <h2 id="titulo-historial" className="mb-1 text-lg font-extrabold">Historial de versiones</h2>
+    <p className="mb-3 text-sm text-tenue">Las partidas ya jugadas conservan la versión con la que se jugaron; las nuevas usan la vigente.</p>
+    <ul className="grid gap-2">
+      {versiones.map((v) => {
+        const estado = ESTADOS_VERSION[v.estado] || ESTADOS_VERSION.borrador;
+        const fecha = v.aprobadoEn || v.creadoEn;
+        return (
+          <li key={v.id} className="flex flex-wrap items-center gap-3 rounded-2xl border border-borde bg-white px-4 py-3">
+            <span className="font-extrabold">Versión {v.numero}</span>
+            <Insignia tono={estado.tono}>{estado.texto}</Insignia>
+            {v.id === vigenteId && <Insignia tono="azul">Vigente</Insignia>}
+            {fecha && (
+              <span className="text-sm text-tenue">
+                {v.aprobadoEn ? "aprobada el " : "creada el "}
+                {new Date(fecha).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" })}
+              </span>
+            )}
+            <span className="text-sm text-tenue">· {v.ejercicios.length} ejercicios</span>
+            {v.estado !== "borrador" && v.ejercicios.length > 0 && (
+              <Boton variante="fantasma" tamano="sm" className="ml-auto" onClick={() => alVer(v.ejercicios)}>
+                <Eye className="size-4" aria-hidden="true" /> Ver
+              </Boton>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  </section>
+);
+
 export const PaginaActividad = () => {
   const { id } = useParams();
   const avisar = useAvisos();
@@ -50,7 +90,7 @@ export const PaginaActividad = () => {
   const [errores, setErrores] = useState([]);
   const [ocupado, setOcupado] = useState(null);
   const [confirmar, setConfirmar] = useState(null);
-  const [previa, setPrevia] = useState(null); // contrato de ejercicios en vista previa; null = editando
+  const [previa, setPrevia] = useState(null); // ejercicios (contrato) que se están previsualizando
 
   const { juego, versiones = [] } = consulta.datos || {};
   const borrador = versiones.find((v) => v.estado === "borrador");
@@ -88,13 +128,21 @@ export const PaginaActividad = () => {
     return !hay;
   };
 
-  // La vista previa muestra lo que quedaría guardado; no se puede previsualizar algo que no pasa la revisión
-  const alternarPrevia = () => {
-    if (previa) {
-      setPrevia(null);
+  // Previsualiza lo que hay en el editor, aunque aún no esté guardado
+  const previsualizar = () => {
+    if (!recursos.length) {
+      avisar("El catálogo de palabras todavía no cargó. Inténtalo de nuevo en un momento.", "error");
       return;
     }
-    if (validar()) setPrevia(aContrato(ejercicios, mecanica, recursos));
+    if (!ejercicios.length) {
+      avisar("Agrega al menos un ejercicio para verlo.", "error");
+      return;
+    }
+    try {
+      setPrevia(aContrato(ejercicios, mecanica, recursos));
+    } catch (error) {
+      avisar(error.message, "error");
+    }
   };
 
   const guardar = conAccion("guardar", async () => {
@@ -198,31 +246,29 @@ export const PaginaActividad = () => {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Boton variante="fantasma" tamano="sm" onClick={alternarPrevia}>
-                {previa ? <Pencil className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
-                {previa ? "Volver a editar" : "Vista previa"}
-              </Boton>
               <Boton variante="fantasma" tamano="sm" onClick={() => setConfirmar("descartar")}><Trash2 className="size-4" aria-hidden="true" /> Descartar</Boton>
+              <Boton variante="secundario" tamano="sm" onClick={previsualizar}><Eye className="size-4" aria-hidden="true" /> Vista previa</Boton>
               <Boton variante="secundario" tamano="sm" cargando={ocupado === "guardar"} onClick={guardar}><Save className="size-4" aria-hidden="true" /> Guardar</Boton>
               <Boton tamano="sm" cargando={ocupado === "aprobar"} onClick={aprobar}><CheckCircle2 className="size-4" aria-hidden="true" /> Aprobar</Boton>
             </div>
           </Tarjeta>
           <MensajeError error={catalogo.error} alReintentar={catalogo.recargar} />
-          {previa ? (
-            <VistaVersion version={{ ejercicios: previa }} />
-          ) : (
-            <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} mecanica={mecanica} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
-          )}
+          <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} mecanica={mecanica} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
         </section>
       ) : vigente ? (
         <section aria-labelledby="titulo-vigente">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 id="titulo-vigente" className="text-lg font-extrabold">Lo que verán tus estudiantes</h2>
-            {!archivado && (
-              <Boton variante="secundario" tamano="sm" cargando={ocupado === "nueva"} onClick={nuevaVersion}>
-                <FilePlus2 className="size-4" aria-hidden="true" /> Editar como versión nueva
+            <div className="flex flex-wrap gap-2">
+              <Boton variante="fantasma" tamano="sm" onClick={() => setPrevia(vigente.ejercicios)}>
+                <Eye className="size-4" aria-hidden="true" /> Probar como estudiante
               </Boton>
-            )}
+              {!archivado && (
+                <Boton variante="secundario" tamano="sm" cargando={ocupado === "nueva"} onClick={nuevaVersion}>
+                  <FilePlus2 className="size-4" aria-hidden="true" /> Editar como versión nueva
+                </Boton>
+              )}
+            </div>
           </div>
           <VistaVersion version={vigente} />
         </section>
@@ -233,6 +279,9 @@ export const PaginaActividad = () => {
         </Tarjeta>
       )}
 
+      {versiones.length > 1 && <HistorialVersiones versiones={versiones} vigenteId={juego.versionActualId} alVer={setPrevia} />}
+
+      <VistaPrevia ejercicios={previa} alCerrar={() => setPrevia(null)} />
       <Confirmar
         abierto={confirmar === "descartar"}
         titulo="¿Descartar este borrador?"

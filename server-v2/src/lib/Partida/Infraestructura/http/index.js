@@ -2,6 +2,8 @@ const PartidaRoutes = require("./PartidaRoutes");
 const PartidaController = require("./PartidaController");
 const InteraccionRoutes = require("./InteraccionRoutes");
 const InteraccionController = require("./InteraccionController");
+const ResultadoRoutes = require("./ResultadoRoutes");
+const ResultadoController = require("./ResultadoController");
 
 const SesionJuegoRepositoryMongoose = require("../SesionJuegoRepositoryMongoose");
 const InteraccionRepositoryMongoose = require("../InteraccionRepositoryMongoose");
@@ -10,6 +12,7 @@ const JuegoRepositoryMongoose = require("../../../Juego/Infraestructura/JuegoRep
 const VersionRepositoryMongoose = require("../../../Juego/Infraestructura/VersionRepositoryMongoose");
 const CanalRepositoryMongoose = require("../../../Canal/Infraestructura/CanalRepositoryMongoose");
 const EstudianteRepositorySequelize = require("../../../Aula/Infraestructura/EstudianteRepositorySequelize");
+const CursoRepositorySequelize = require("../../../Aula/Infraestructura/CursoRepositorySequelize");
 
 const IniciarPartida = require("../../Aplicacion/IniciarPartida");
 const ListarPartidas = require("../../Aplicacion/ListarPartidas");
@@ -21,6 +24,8 @@ const FinalizarPartida = require("../../Aplicacion/FinalizarPartida");
 const AbandonarPartida = require("../../Aplicacion/AbandonarPartida");
 const RegistrarInteraccion = require("../../Aplicacion/RegistrarInteraccion");
 const ListarInteracciones = require("../../Aplicacion/ListarInteracciones");
+const ConsultarResultados = require("../../Aplicacion/ConsultarResultados");
+const ObtenerResumenInicio = require("../../Aplicacion/ObtenerResumenInicio");
 
 module.exports = function registerPartidaModule(app) {
   const repo = new SesionJuegoRepositoryMongoose();
@@ -46,6 +51,12 @@ module.exports = function registerPartidaModule(app) {
     listarInteracciones: new ListarInteracciones(interaccionRepo, repo)
   });
 
+  const resultadoController = new ResultadoController({
+    consultarResultados: new ConsultarResultados(repo, juegoRepo, versionRepo),
+    obtenerResumenInicio: new ObtenerResumenInicio(repo, juegoRepo, new CursoRepositorySequelize())
+  });
+
   app.use("/api/partidas", PartidaRoutes(controller));
+  app.use("/api", ResultadoRoutes(resultadoController));
   app.use("/api/interacciones", InteraccionRoutes(interaccionController));
 };

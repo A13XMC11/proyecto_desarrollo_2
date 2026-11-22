@@ -1,8 +1,6 @@
 const LimiteAlcanzado = require("../../Compartido/Dominio/Errores/LimiteAlcanzado");
 const ConflictoDeEstado = require("../../Compartido/Dominio/Errores/ConflictoDeEstado");
-
-const dia = (fecha) => fecha.toISOString().slice(0, 10);
-const mes = (fecha) => fecha.toISOString().slice(0, 7);
+const { periodoDiario, periodoMensual } = require("../Dominio/Entidades/Periodo");
 
 // Reserva el cupo de una generación ANTES de llamar al proveedor (RF-024, RNF-012):
 // una generación activa por docente, el cupo diario del docente y el costo máximo de una llamada
@@ -23,7 +21,7 @@ class ReservarCupoGeneracion {
     const hechas = [];
     try {
       const diaria = await this.cuotaRepository.reservar({
-        docenteId: generacion.docenteId, periodo: dia(ahora), cantidad: 1, limite: this.config.maxDiarias
+        docenteId: generacion.docenteId, periodo: periodoDiario(ahora, this.config.zonaHoraria), cantidad: 1, limite: this.config.maxDiarias
       });
       if (!diaria.reservada) {
         throw new LimiteAlcanzado("Ya usaste todas las actividades con IA de hoy. Mañana tendrás cupo de nuevo.", "CUPO_DIARIO_AGOTADO");
@@ -31,7 +29,7 @@ class ReservarCupoGeneracion {
       hechas.push({ cuotaId: diaria.cuota.id, cantidad: 1 });
 
       const global = await this.cuotaRepository.reservar({
-        periodo: mes(ahora), cantidad: this.config.costoMaximoLlamada, limite: this.config.presupuestoMensual
+        periodo: periodoMensual(ahora, this.config.zonaHoraria), cantidad: this.config.costoMaximoLlamada, limite: this.config.presupuestoMensual
       });
       if (!global.reservada) {
         // No se expone el presupuesto global: es un dato de administración

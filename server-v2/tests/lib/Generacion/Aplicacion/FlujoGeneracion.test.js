@@ -43,8 +43,10 @@ const escenario = async () => {
   return crearEscenario();
 };
 
-const hoy = () => new Date().toISOString().slice(0, 10);
-const mes = () => new Date().toISOString().slice(0, 7);
+const { periodoDiario, periodoMensual } = require("../../../../src/lib/Generacion/Dominio/Entidades/Periodo");
+// Mismo día calendario que usa el servidor (zona horaria configurada), no el día en UTC
+const hoy = () => periodoDiario(new Date(), config().zonaHoraria);
+const mes = () => periodoMensual(new Date(), config().zonaHoraria);
 const sinCuota = { reservado: 0, consumido: 0 };
 const cerca = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} no es ${b}`);
 const dormir = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
@@ -571,5 +573,25 @@ describe("Flujo de generación con GeneradorContenidoIA (proveedor simulado)", (
     assert.deepEqual([generacion.estado, generacion.errorCodigo, generacion.usoDesconocido], ["fallida", "GENERADOR_RESPUESTA_INCOMPLETA", true]);
     assert.equal(generacion.juegoId, undefined, "no se guardó ningún borrador");
     assert.equal((await diaria(c, esc.docenteId)).consumido, 1, "pudo haber costo: el cupo diario queda consumido");
+  });
+});
+
+describe("Flujo de generación: el día del cupo es el de la zona horaria configurada", () => {
+  prueba("a las 21:00 en Ecuador (02:00 UTC del día siguiente) el cupo cuenta para el día local", async () => {
+    const esc = await escenario();
+    const c = montar(conUso());
+    const canal = await new CanalRepositoryMongoose().findByCodigo("docente_computador");
+    const { generacion } = await c.repo.save(new Generacion({
+      docenteId: esc.docenteId, canalId: canal.id, claveSolicitud: clave(),
+      parametros: { cursoId: esc.cursoId, estudianteId: esc.estudianteId, habilidad: "vocales", tematica: "animales", cantidad: 5 }
+    }));
+    const tarde = new Date("2026-11-23T02:00:00Z"); // 22 de noviembre, 21:00 en America/Guayaquil
+    await c.reservarCupo.ejecutar(generacion, tarde);
+    assert.equal((await c.cuotaRepo.obtener(esc.docenteId, "2026-11-22")).reservado, 1, "cuenta para el 22, el día local");
+    assert.equal(await c.cuotaRepo.obtener(esc.docenteId, "2026-11-23"), null, "no para el 23 (UTC)");
+  });
+
+  prueba("una zona horaria inexistente se rechaza al configurar", () => {
+    assert.throws(() => config({ zonaHoraria: "Marte/Olympus" }), /zona horaria inválida/);
   });
 });

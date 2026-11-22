@@ -154,6 +154,7 @@ describe("CRUD HTTP sobre PostgreSQL", () => {
     const cuotas = await llamar("/api/cuotas", { docente });
     assert.equal(cuotas.status, 200);
     assert.equal(cuotas.cuerpo.diaria, null);
+    assert.deepEqual([cuotas.cuerpo.limiteDiario, cuotas.cuerpo.generacionHabilitada], [3, false], "contrato de cuotas: límite y si la generación está habilitada");
     assert.equal(cuotas.cuerpo.global, undefined, "el contador global no se expone a los docentes");
     assert.equal((await llamar("/api/cuotas?dia=mal", { docente })).status, 400);
     assert.equal((await llamar("/api/cuotas", { metodo: "POST", docente })).status, 404, "las cuotas no se modifican por HTTP");

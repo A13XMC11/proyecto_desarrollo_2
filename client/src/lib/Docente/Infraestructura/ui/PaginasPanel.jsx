@@ -5,7 +5,6 @@ import { Boton, BotonEnlace, Campo, Cargando, Encabezado, MensajeError, Tarjeta 
 import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { useConsulta } from "../../../../Infraestructura/http/useConsulta";
 import { useCursos } from "../../../Aula/Aplicacion/useAula";
-import { JuegoApiHttp } from "../../../Juego/Infraestructura/JuegoApiHttp";
 import { PartidaApiHttp } from "../../../Partida/Infraestructura/PartidaApiHttp";
 import { GeneracionApiHttp } from "../../../Generacion/Infraestructura/GeneracionApiHttp";
 import { TarjetaActividad } from "../../../Juego/Infraestructura/ui/PaginaActividades";
@@ -18,14 +17,15 @@ const saludo = () => {
 
 export const PaginaInicio = () => {
   const { docente } = useSesion();
+  // Los cursos se piden aparte porque las tarjetas de actividad muestran su nombre
   const cursos = useCursos({ archivado: false });
-  const recientes = useConsulta(() => JuegoApiHttp.listar({ limite: 3 }), []);
-  const enCurso = useConsulta(() => PartidaApiHttp.listar({ estado: "en_curso" }), []);
+  // Resumen calculado en el servidor (GET /api/inicio): una sola petición
+  const resumen = useConsulta(() => PartidaApiHttp.inicio(), []);
+  const r = resumen.datos;
   const nombre = docente?.nombre?.split(" ")[0];
-  const sinCursos = cursos.datos && cursos.datos.length === 0;
-  // Títulos para las partidas a medias (el listado de partidas solo trae el id del juego)
-  const titulos = useConsulta(() => JuegoApiHttp.listar({ limite: 50, incluirArchivados: "true" }), []);
-  const tituloDe = (id) => titulos.datos?.items.find((j) => j.id === id)?.titulo;
+  const sinCursos = r && r.cursosActivos === 0;
+  const enCurso = r?.enCurso.partidas || [];
+  const recientes = r?.actividades.recientes || [];
 
   return (
     <>
@@ -49,29 +49,36 @@ export const PaginaInicio = () => {
         </Tarjeta>
       )}
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
+      <MensajeError error={resumen.error} alReintentar={resumen.recargar} />
+
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Tarjeta>
           <p className="flex items-center gap-2 text-sm font-medium text-tenue"><Users className="size-4" aria-hidden="true" /> Cursos activos</p>
-          <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{cursos.datos ? cursos.datos.length : "–"}</p>
+          <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{r ? r.cursosActivos : "–"}</p>
         </Tarjeta>
         <Tarjeta>
           <p className="text-sm font-medium text-tenue">Actividades en tu biblioteca</p>
-          <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{recientes.datos ? recientes.datos.total : "–"}</p>
+          <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{r ? r.actividades.total : "–"}</p>
         </Tarjeta>
         <Tarjeta>
           <p className="text-sm font-medium text-tenue">Partidas a medias</p>
-          <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{enCurso.datos ? enCurso.datos.length : "–"}</p>
+          <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{r ? r.enCurso.total : "–"}</p>
+        </Tarjeta>
+        <Tarjeta>
+          <p className="text-sm font-medium text-tenue">Partidas terminadas esta semana</p>
+          <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{r ? r.terminadasSemana : "–"}</p>
+          {r?.terminadasSemana > 0 && <Link to="/panel/resultados" className="mt-1 inline-block text-sm font-medium text-marca-700 hover:underline">Ver resultados</Link>}
         </Tarjeta>
       </div>
 
-      {enCurso.datos?.length > 0 && (
+      {enCurso.length > 0 && (
         <section className="mb-10" aria-labelledby="titulo-en-curso">
           <h2 id="titulo-en-curso" className="mb-3 text-lg font-extrabold">Para retomar</h2>
           <ul className="grid gap-2">
-            {enCurso.datos.slice(0, 5).map((p) => (
+            {enCurso.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-3 rounded-2xl border border-borde bg-white px-4 py-3">
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{tituloDe(p.juegoId) || "Actividad"}</span>
+                  <span className="block truncate font-medium">{p.titulo || "Actividad"}</span>
                   <span className="text-sm text-tenue">Va en el ejercicio {p.ejercicioActual + 1}</span>
                 </span>
                 <BotonEnlace to={`/aula/partida/${p.id}`} tamano="sm"><Play className="size-4" aria-hidden="true" /> Continuar</BotonEnlace>
@@ -88,12 +95,11 @@ export const PaginaInicio = () => {
             Ver todas <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
         </div>
-        <MensajeError error={recientes.error} alReintentar={recientes.recargar} />
-        {recientes.cargando && !recientes.datos ? (
+        {resumen.cargando && !r ? (
           <div className="grid gap-4 sm:grid-cols-3"><Cargando filas={1} alto="h-48" /></div>
-        ) : !recientes.datos ? null : recientes.datos.items.length ? (
+        ) : !r ? null : recientes.length ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {recientes.datos.items.map((j) => <TarjetaActividad key={j.id} juego={j} cursos={cursos.datos || []} />)}
+            {recientes.map((j) => <TarjetaActividad key={j.id} juego={j} cursos={cursos.datos || []} />)}
           </div>
         ) : (
           <p className="rounded-2xl border border-dashed border-borde p-6 text-center text-tenue">Aún no tienes actividades. Cuando crees la primera, aparecerá aquí.</p>
@@ -148,9 +154,9 @@ export const PaginaCuenta = () => {
         <Tarjeta>
           <p className="text-sm font-medium text-tenue">Generaciones con IA hoy</p>
           {usadas === null ? <Cargando filas={1} alto="h-10" /> : (
-            <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{usadas} <span className="text-lg font-bold text-tenue">de 3 usadas</span></p>
+            <p className="mt-1 font-titulo text-3xl font-black tabular-nums">{usadas} <span className="text-lg font-bold text-tenue">de {cuotas.datos?.limiteDiario ?? 3} usadas</span></p>
           )}
-          <p className="mt-2 text-sm text-tenue">El cupo vuelve a 3 cada día.</p>
+          <p className="mt-2 text-sm text-tenue">El cupo vuelve a {cuotas.datos?.limiteDiario ?? 3} cada día.</p>
         </Tarjeta>
       </div>
     </>

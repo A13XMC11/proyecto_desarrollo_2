@@ -56,6 +56,23 @@ export const PlantillaDocente = () => {
   const ubicacion = useLocation();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const principal = useRef(null);
+  const botonMenu = useRef(null);
+  const estabaAbierto = useRef(false);
+
+  // Menú móvil como diálogo: Escape lo cierra y, al cerrarse, el foco vuelve al botón que lo abrió
+  useEffect(() => {
+    if (menuAbierto) {
+      estabaAbierto.current = true;
+      const alPulsar = (e) => e.key === "Escape" && setMenuAbierto(false);
+      document.addEventListener("keydown", alPulsar);
+      return () => document.removeEventListener("keydown", alPulsar);
+    }
+    if (estabaAbierto.current) {
+      estabaAbierto.current = false;
+      botonMenu.current?.focus();
+    }
+    return undefined;
+  }, [menuAbierto]);
 
   // Al cambiar de página, el foco va al contenido para quien usa lector de pantalla
   useEffect(() => {
@@ -80,6 +97,7 @@ export const PlantillaDocente = () => {
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-borde bg-white/95 px-4 backdrop-blur lg:hidden">
         <Link to="/panel"><Logo /></Link>
         <button
+          ref={botonMenu}
           type="button"
           onClick={() => setMenuAbierto(true)}
           className="grid size-11 cursor-pointer place-items-center rounded-xl"
@@ -96,7 +114,8 @@ export const PlantillaDocente = () => {
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white px-4 py-5 shadow-2xl">
             <div className="mb-6 flex items-center justify-between px-2">
               <Logo />
-              <button type="button" onClick={() => setMenuAbierto(false)} className="grid size-11 cursor-pointer place-items-center rounded-xl" aria-label="Cerrar menú">
+              {/* autoFocus: al abrir, el foco entra al menú (no se queda detrás de la capa oscura) */}
+              <button type="button" autoFocus onClick={() => setMenuAbierto(false)} className="grid size-11 cursor-pointer place-items-center rounded-xl" aria-label="Cerrar menú">
                 <X className="size-6" aria-hidden="true" />
               </button>
             </div>

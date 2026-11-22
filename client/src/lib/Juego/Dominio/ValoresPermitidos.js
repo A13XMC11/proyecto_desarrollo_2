@@ -28,16 +28,19 @@ export const ESTADOS_GENERACION = {
   procesando: { texto: "Generando", tono: "azul" },
   completada: { texto: "Lista para revisar", tono: "verde" },
   fallida: { texto: "No se pudo generar", tono: "rojo" },
-  interrumpida: { texto: "Cancelada", tono: "gris" }
+  interrumpida: { texto: "Interrumpida", tono: "gris" }
 };
 
-// Por qué terminó mal una generación (errorCodigo del servidor), en palabras para el docente
-export const MENSAJES_ERROR_GENERACION = {
+// Explicación para el docente según el código que guarda el servidor
+export const MOTIVOS_GENERACION = {
+  CANCELADA_POR_DOCENTE: "La cancelaste.",
+  CONTENIDO_INVALIDO: "La IA propuso ejercicios que no pasaron la revisión automática. Puedes pedirla de nuevo.",
+  PROVEEDOR_ERROR: "El servicio de IA no respondió bien. Inténtalo de nuevo en unos minutos.",
+  CATALOGO_INSUFICIENTE: "No hay suficientes palabras revisadas para esa temática.",
   GENERACION_DESHABILITADA: "La creación con IA todavía no está habilitada.",
   GENERACION_EN_CURSO: "Ya tenías otra actividad generándose.",
   CUPO_DIARIO_AGOTADO: "Ya usaste todas las actividades con IA de hoy.",
   PRESUPUESTO_AGOTADO: "La creación con IA no estaba disponible en ese momento.",
-  CONTENIDO_INVALIDO: "La IA propuso algo que no cumple las reglas de la actividad. Prueba de nuevo, quizá pidiendo algo un poco distinto.",
   GENERADOR_TIEMPO_AGOTADO: "La IA tardó demasiado en responder. Prueba de nuevo en unos minutos.",
   GENERADOR_ERROR: "No se pudo conectar con la IA. Prueba de nuevo en unos minutos.",
   GENERADOR_BLOQUEADO: "La IA no pudo atender esa petición. Prueba con una instrucción distinta.",
@@ -45,7 +48,7 @@ export const MENSAJES_ERROR_GENERACION = {
   GENERADOR_RESPUESTA_INCOMPLETA: "La IA no alcanzó a terminar la actividad. Prueba de nuevo.",
   GENERADOR_RESPUESTA_INVALIDA: "La IA respondió algo que no se pudo usar. Prueba de nuevo.",
   ERROR_AL_GUARDAR: "La actividad se generó pero no se pudo guardar. Prueba de nuevo.",
-  CANCELADA_POR_DOCENTE: "La cancelaste."
+  interrumpida: "Se cortó mientras se generaba. Puedes pedirla de nuevo."
 };
 
 export const AVATARES = ["gato", "ave", "tortuga", "pez", "conejo", "ardilla"];

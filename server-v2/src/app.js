@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const { crearMiddlewareSesion } = require("./Infraestructura/http/sesion");
 
 const registerDocenteModule = require("./lib/Docente/Infraestructura/http"); // auto-usa index.js del módulo
 const registerAulaModule = require("./lib/Aula/Infraestructura/http");
@@ -24,10 +25,17 @@ function estadoDeError(err) {
 function buildApp() {
   const app = express();
 
+  // Detrás de un proxy HTTPS (producción) la cookie Secure necesita confiar en X-Forwarded-Proto
+  if (process.env.NODE_ENV === "production") app.set("trust proxy", 1);
+
   // Middlewares
-  app.use(cors());
+  // CORS solo para los orígenes de APP_ORIGIN (separados por coma) y con credenciales. Sin APP_ORIGIN no se
+  // abre a otros orígenes: en desarrollo el cliente llega por el proxy de Vite (mismo origen).
+  const origenes = (process.env.APP_ORIGIN || "").split(",").map((o) => o.trim()).filter(Boolean);
+  app.use(cors({ origin: origenes.length ? origenes : false, credentials: true, exposedHeaders: ["X-CSRF-Token"] }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(crearMiddlewareSesion());
 
   app.get("/api/health", (req, res) => res.json({ ok: true }));
 

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { ArrowRight, Lightbulb, PartyPopper, RotateCcw } from "lucide-react";
 import { Boton, MensajeError } from "../../../../Infraestructura/ui/componentes";
 import { usePartida } from "../../Aplicacion/usePartida";
@@ -44,6 +45,14 @@ const Final = ({ partida, alOtro, alSalir }) => {
 
 export const GamePlayer = ({ partidaId, alOtro, alSalir }) => {
   const { partida, ejercicio, indice, fase, resultado, pista, enviando, error, responder, reintentar, continuar, pedirPista, recargar } = usePartida(partidaId);
+  const seccion = useRef(null);
+
+  // Cada vez que toca responder (ejercicio nuevo o "Intentar otra vez"), el foco va a la primera opción:
+  // el botón que se pulsó desaparece y, sin esto, quien usa teclado perdería su lugar
+  useEffect(() => {
+    if (fase !== "respondiendo") return;
+    seccion.current?.querySelector("[role=group] button:not([disabled]), [aria-label='Sílabas disponibles'] button:not([disabled])")?.focus({ preventScroll: true });
+  }, [fase, ejercicio?.id]);
 
   if (fase === "cargando") {
     return <div className="mx-auto h-96 w-full max-w-3xl animate-pulse rounded-3xl bg-white/70" role="status" aria-label="Cargando la actividad" />;
@@ -58,7 +67,7 @@ export const GamePlayer = ({ partidaId, alOtro, alSalir }) => {
     <div className="mx-auto grid w-full max-w-3xl gap-6">
       <Progreso ejercicios={partida.ejercicios} indice={indice} />
 
-      <section key={ejercicio.id} className="animate-aparecer rounded-[2rem] bg-white p-5 shadow-xl shadow-marca-900/5 ring-1 ring-marca-100 sm:p-10" aria-labelledby="consigna">
+      <section ref={seccion} key={ejercicio.id} className="animate-aparecer rounded-[2rem] bg-white p-5 shadow-xl shadow-marca-900/5 ring-1 ring-marca-100 sm:p-10" aria-labelledby="consigna">
         <p id="consigna" className="text-center text-xl text-tenue sm:text-2xl">{ejercicio.consigna}</p>
         {ejercicio.objetivo && ejercicio.tipo === "seleccionar_opcion" && (
           <p className="my-6 text-center font-titulo text-6xl font-black tracking-wide text-marca-900 sm:text-8xl">{ejercicio.objetivo}</p>

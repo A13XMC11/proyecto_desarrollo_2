@@ -10,6 +10,7 @@ function leerConfiguracionGeneracion(env = process.env) {
     permitirDiez: env.PERMITIR_10_EJERCICIOS === "true",
     maxDiarias: numero(env, "AI_MAX_DIARIAS") ?? 3,
     maxSimultaneas: numero(env, "AI_MAX_SIMULTANEAS") ?? 1,
+    zonaHoraria: env.ZONA_HORARIA && env.ZONA_HORARIA.trim() ? env.ZONA_HORARIA.trim() : undefined,
     tiempoLimiteMs: numero(env, "AI_TIEMPO_LIMITE_MS"),
     margenConciliacionMs: numero(env, "AI_MARGEN_CONCILIACION_MS"),
     presupuestoMensual: numero(env, "AI_PRESUPUESTO_MENSUAL"),

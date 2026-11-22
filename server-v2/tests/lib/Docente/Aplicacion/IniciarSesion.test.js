@@ -32,6 +32,22 @@ describe("IniciarSesion", () => {
     }
   });
 
+  it("con un correo inexistente igual verifica contra un hash (el tiempo no delata qué correos existen)", async () => {
+    const verificados = [];
+    const espia = {
+      hashear: (c) => hasheador.hashear(c),
+      verificar: async (c, hash) => {
+        verificados.push(hash);
+        return hasheador.verificar(c, hash);
+      }
+    };
+    const uc = new IniciarSesion({ findByCorreo: async () => null }, espia);
+    await assert.rejects(uc.ejecutar({ correo: "nadie@escuela.ec", contrasena: "clave-segura" }), (e) => e.statusCode === 401);
+    await assert.rejects(uc.ejecutar({ correo: "otro@escuela.ec", contrasena: "clave-segura" }), (e) => e.statusCode === 401);
+    assert.equal(verificados.length, 2);
+    assert.ok(verificados.every((h) => typeof h === "string" && h.length > 0));
+  });
+
   it("sin datos -> 400", async () => {
     await assert.rejects((await caso()).ejecutar({}), (e) => e.statusCode === 400);
   });

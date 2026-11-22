@@ -1,4 +1,5 @@
 const EntradaInvalida = require("../../../Compartido/Dominio/Errores/EntradaInvalida");
+const { periodoDiario } = require("./Periodo");
 
 const entero = (valor, campo, minimo) => {
   if (!Number.isInteger(valor) || valor < minimo) throw new EntradaInvalida(`${campo} debe ser un entero de ${minimo} o más`);
@@ -16,7 +17,7 @@ const numero = (valor, campo, { exclusivoCero = false } = {}) => {
 // tras medir el modelo (S4-06 y S4-08): no hay valores por defecto que puedan costar dinero.
 class ConfiguracionGeneracion {
   constructor({
-    habilitada = false, maxDiarias = 3, maxSimultaneas = 1, permitirDiez = false,
+    habilitada = false, maxDiarias = 3, maxSimultaneas = 1, permitirDiez = false, zonaHoraria = "America/Guayaquil",
     tiempoLimiteMs, margenConciliacionMs, presupuestoMensual, costoMaximoLlamada, tarifaEntrada, tarifaSalida
   } = {}) {
     if (typeof habilitada !== "boolean" || typeof permitirDiez !== "boolean") throw new EntradaInvalida("configuración de generación inválida");
@@ -24,6 +25,8 @@ class ConfiguracionGeneracion {
     this.permitirDiez = permitirDiez;
     this.maxDiarias = entero(maxDiarias, "maxDiarias", 1);
     this.maxSimultaneas = entero(maxSimultaneas, "maxSimultaneas", 1);
+    periodoDiario(new Date(), zonaHoraria); // rechaza una zona horaria inexistente al arrancar
+    this.zonaHoraria = zonaHoraria;
 
     if (habilitada) {
       this.tiempoLimiteMs = entero(tiempoLimiteMs, "tiempoLimiteMs", 1);

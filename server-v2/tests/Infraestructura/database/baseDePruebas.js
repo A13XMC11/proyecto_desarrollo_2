@@ -31,13 +31,17 @@ async function prepararMongo() {
   const uri = process.env.MONGO_URI_TEST;
   if (!uri) return "OMITIDO: MONGO_URI_TEST no está definida; no se ejecutaron pruebas de MongoDB";
   if (!esDePruebas(uri)) return `OMITIDO: MONGO_URI_TEST debe apuntar a una base cuyo nombre contenga "test" (${uri})`;
+  // La limpieza usa una conexión aparte: si usara la principal, su primer evento "connected" sería esta
+  // conexión temporal y quien lo espere (el almacén de sesiones) se quedaría con un cliente ya cerrado.
+  const temporal = mongoose.createConnection(uri, { serverSelectionTimeoutMS: 3000 });
   try {
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
-    await mongoose.connection.dropDatabase();
-    await mongoose.disconnect();
+    await temporal.asPromise();
+    await temporal.dropDatabase();
   } catch (error) {
+    await temporal.close().catch(() => {});
     return `OMITIDO: no hay MongoDB disponible en MONGO_URI_TEST (${error.message}); las pruebas NO se ejecutaron`;
   }
+  await temporal.close();
   // Code first: las colecciones e índices salen de los esquemas
   await connectMongo();
   return null;

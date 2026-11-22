@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { GraduationCap, Info, Sparkles, X } from "lucide-react";
 import { AreaTexto, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector, Tarjeta } from "../../../../Infraestructura/ui/componentes";
@@ -6,15 +6,20 @@ import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { nuevoIdOperacion } from "../../../../Infraestructura/http/clienteHttp";
 import { useConsulta } from "../../../../Infraestructura/http/useConsulta";
 import { useCursos, useEstudiantes } from "../../../Aula/Aplicacion/useAula";
-import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, MENSAJES_ERROR_GENERACION, TEMATICAS, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
+import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, MOTIVOS_GENERACION, TEMATICAS, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
 import { GeneracionApiHttp } from "../GeneracionApiHttp";
 
-const LIMITE_DIARIO_INICIAL = 3; // solo mientras llega el valor real del servidor
 const MAX_INSTRUCCION = 500;
+// Mientras haya una solicitud en cola o generándose, la lista se consulta sola cada pocos segundos
+const INTERVALO_SEGUIMIENTO_MS = 3000;
+
+const esActiva = (g) => g.estado === "pendiente" || g.estado === "procesando";
+const motivoDe = (g) => (g.estado === "fallida" ? MOTIVOS_GENERACION[g.errorCodigo] : g.estado === "interrumpida" ? MOTIVOS_GENERACION.interrumpida : null);
 
 const Cupo = ({ cuotas }) => {
+  // El límite lo fija el servidor; desactivar un botón no bastaría para aplicarlo. El 3 solo rige mientras llega.
+  const limite = cuotas?.limiteDiario ?? 3;
   const usadas = cuotas ? Math.round((cuotas.diaria?.consumido || 0) + (cuotas.diaria?.reservado || 0)) : null;
-  const limite = cuotas?.maximoDiario ?? LIMITE_DIARIO_INICIAL;
   const libres = usadas === null ? null : Math.max(0, limite - usadas);
   return (
     <Tarjeta>
@@ -51,6 +56,19 @@ export const PaginaCrearConIA = () => {
   // Una clave por solicitud: si el envío se repite (doble clic, red lenta), el servidor devuelve la misma
   const clave = useRef(nuevoIdOperacion());
 
+  const hayActivas = (generaciones.datos || []).some(esActiva);
+  const recargarGeneraciones = generaciones.recargar;
+  const recargarCuotas = cuotas.recargar;
+  useEffect(() => {
+    if (!hayActivas) return undefined;
+    const temporizador = setInterval(recargarGeneraciones, INTERVALO_SEGUIMIENTO_MS);
+    return () => {
+      clearInterval(temporizador);
+      // Al terminar la última, el cupo cambió (se consumió o se devolvió)
+      recargarCuotas();
+    };
+  }, [hayActivas, recargarGeneraciones, recargarCuotas]);
+
   const poner = (campo) => (e) => setDatos((d) => ({ ...d, [campo]: e.target.value, ...(campo === "cursoId" && { estudianteId: "" }) }));
 
   const enviar = async (e) => {
@@ -74,7 +92,7 @@ export const PaginaCrearConIA = () => {
         setDatos((d) => ({ ...d, instruccion: "" }));
         avisar("Borrador listo. Revísalo antes de usarlo en clase.");
       } else if (generacion.estado === "fallida") {
-        avisar(MENSAJES_ERROR_GENERACION[generacion.errorCodigo] || "No se pudo crear la actividad. Puedes intentarlo de nuevo.", "error");
+        avisar(MOTIVOS_GENERACION[generacion.errorCodigo] || "No se pudo crear la actividad. Puedes intentarlo de nuevo.", "error");
       } else if (generacion.estado === "interrumpida") {
         avisar("La solicitud se interrumpió antes de terminar. Puedes intentarlo de nuevo.", "error");
       } else {
@@ -164,10 +182,14 @@ export const PaginaCrearConIA = () => {
           <Cupo cuotas={cuotas.datos} />
           <div className="flex gap-3 rounded-2xl bg-marca-50 p-4 text-sm text-marca-900 ring-1 ring-marca-100">
             <Info className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-            <p>
-              La IA solo propone un borrador con las palabras del catálogo. Tú lo revisas y lo apruebas antes de que llegue a los estudiantes. También puedes{" "}
-              <Link to="/panel/actividades/nueva" className="font-medium underline underline-offset-2">crear la actividad a mano</Link>.
-            </p>
+            {cuotas.datos && !cuotas.datos.generacionHabilitada ? (
+              <p>
+                La generación con IA está desactivada por ahora. Puedes{" "}
+                <Link to="/panel/actividades/nueva" className="font-medium underline underline-offset-2">crear la actividad a mano</Link>.
+              </p>
+            ) : (
+              <p>Recibirás un borrador: revísalo y apruébalo antes de usarlo en clase. Solo se usan palabras del catálogo revisado y nunca se envían datos de tus estudiantes.</p>
+            )}
           </div>
         </div>
       </div>
@@ -183,7 +205,8 @@ export const PaginaCrearConIA = () => {
           <ul className="grid gap-2">
             {lista.map((g) => {
               const estado = ESTADOS_GENERACION[g.estado] || ESTADOS_GENERACION.pendiente;
-              const activa = g.estado === "pendiente" || g.estado === "procesando";
+              const activa = esActiva(g);
+              const motivo = motivoDe(g);
               const p = g.parametros || {};
               return (
                 <li key={g.id} className="flex flex-col gap-3 rounded-2xl border border-borde bg-white p-4 sm:flex-row sm:items-center">
@@ -195,10 +218,7 @@ export const PaginaCrearConIA = () => {
                       {new Date(g.creadaEn).toLocaleString("es-EC", { dateStyle: "medium", timeStyle: "short" })}
                       {p.instruccion && ` · "${p.instruccion}"`}
                     </p>
-                    {g.errorCodigo && MENSAJES_ERROR_GENERACION[g.errorCodigo] && (
-                      <p className="mt-1 text-sm text-tenue">{MENSAJES_ERROR_GENERACION[g.errorCodigo]}</p>
-                    )}
-                    {g.estado === "interrumpida" && <p className="mt-1 text-sm text-tenue">Se interrumpió antes de terminar. No se reintenta sola.</p>}
+                    {motivo && <p className="mt-1 text-sm text-tenue">{motivo}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <Insignia tono={estado.tono}>{estado.texto}</Insignia>

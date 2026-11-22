@@ -40,7 +40,17 @@ Regla de dependencias: `Dominio` solo importa `Dominio` (y `validator`); `Aplica
 
 ## API (CRUD en todos los módulos)
 
-Hasta que exista la sesión, el docente se identifica con la cabecera `x-docente-id` (excepto `POST /api/docentes` y `GET /api/canales`, que son públicos).
+El docente se identifica con su **sesión**: una cookie `letritas.sid` (HttpOnly, SameSite=Lax y Secure en producción) guardada en MongoDB, en la colección `sesiones`. La cabecera `x-docente-id` ya no se acepta. Son públicos `POST /api/docentes` (registro, que abre la sesión), `POST /api/docentes/sesion` (entrar) y `GET /api/canales`.
+
+| Sesión | Qué hace |
+|---|---|
+| `POST /api/docentes/sesion` `{ correo, contrasena }` | Entra. Regenera el id de sesión y devuelve el token CSRF en la cabecera `X-CSRF-Token`. Con credenciales erróneas responde 401 `CREDENCIALES_INVALIDAS`, igual si el correo no existe. |
+| `GET /api/docentes/sesion` | Devuelve el docente actual y vuelve a entregar `X-CSRF-Token`. El cliente lo usa al recargar la página. |
+| `DELETE /api/docentes/sesion` | Sale: borra la sesión del servidor, así que la misma cookie deja de servir. |
+
+- **CSRF:** `POST`, `PUT` y `DELETE` sobre rutas privadas exigen la cabecera `X-CSRF-Token` con el token de la sesión. Sin él responden 403 `CSRF_INVALIDO`.
+- **Expiración:** la sesión caduca a las **4 h sin actividad** o a las **12 h** desde que se entró (401 `SESION_EXPIRADA`).
+- **Postman:** Postman guarda la cookie solo. Después de entrar, copia la cabecera de respuesta `X-CSRF-Token` en una variable y envíala en las peticiones que cambian datos. Por ejemplo, en *Tests* de la petición de entrada: `pm.collectionVariables.set("csrf", pm.response.headers.get("X-CSRF-Token"))`, y en las demás la cabecera `X-CSRF-Token: {{csrf}}`.
 Cada docente solo ve y modifica sus propios datos. No hay borrado físico salvo en docentes: "eliminar" archiva, descarta, cancela o abandona según el recurso.
 
 | Recurso | Rutas | `DELETE` hace |
@@ -55,10 +65,12 @@ Cada docente solo ve y modifica sus propios datos. No hay borrado físico salvo 
 | Partida (MongoDB) | `POST/GET /api/partidas`, `GET/DELETE /api/partidas/:id`, `POST .../:id/intentos`, `.../pistas`, `.../finalizar` | abandona una partida en curso |
 | Interacción (MongoDB) | `POST/GET /api/interacciones?sesionId=` | append-only: no se edita ni se elimina |
 | Canal (MongoDB) | `GET /api/canales`, `GET /api/canales/:codigo` | catálogo fijo de 4 canales: solo lectura |
+| Resultados (MongoDB) | `GET /api/resultados?cursoId=&estudianteId=&habilidad=&juegoId=&desde=&hasta=` | solo lectura: `{ resumen, porEstudiante, porHabilidad, partidas }`. Los agregados solo cuentan partidas finalizadas; los indicadores siguen el §7.3 (primer intento, sin pista, intentos y completados / disponibles) |
+| Inicio | `GET /api/inicio` | solo lectura: cursos activos, total y recientes de la biblioteca, partidas para retomar con su título y partidas terminadas en los últimos 7 días |
 
 Reglas que aplican los casos de uso: el servidor evalúa los intentos (el cliente solo envía la elección), una partida solo se inicia sobre un juego con versión aprobada, un solo borrador de versión por juego,
 el curso/estudiante de un juego o partida deben ser del docente (se comprueba en PostgreSQL antes de escribir en MongoDB) y las solicitudes de generación son idempotentes por clave.
-Generación con IA (Sprint 4): `POST /api/generaciones` reserva cupo de forma atómica, llama al generador con tiempo límite, valida el contenido contra el catálogo y guarda un borrador de origen `ia`; las interrumpidas se concilian sin reintentar. Está **apagada por defecto** (`AI_ENABLED=false`, responde 503 `GENERACION_DESHABILITADA`). `AI_PROVEEDOR=falso` usa fixtures sin costo; `gemini` hace una llamada real y exige `GEMINI_API_KEY`, `GEMINI_MODELO` y `AI_MAX_TOKENS_SALIDA`. Prompt, esquema, ejemplos, medición (`npm run medir:generacion`) y la lista de autorización para habilitarla: [`../docs/generacion-ia.md`](../docs/generacion-ia.md).
+Generación con IA (Sprint 4): `POST /api/generaciones` reserva cupo de forma atómica, llama al generador con tiempo límite, valida el contenido contra el catálogo y guarda un borrador de origen `ia`; las interrumpidas se concilian sin reintentar. Está **apagada por defecto** (`AI_ENABLED=false`, responde 503 `GENERACION_DESHABILITADA`). `AI_PROVEEDOR=falso` usa fixtures sin costo; `gemini` hace una llamada real y exige `GEMINI_API_KEY`, `GEMINI_MODELO` y `AI_MAX_TOKENS_SALIDA`. Prompt, esquema, ejemplos, medición (`npm run medir:generacion`) y la lista de autorización para habilitarla: [`../docs/generacion-ia.md`](../docs/generacion-ia.md). El día del cupo diario es el calendario de `ZONA_HORARIA` (por defecto `America/Guayaquil`) y `GET /api/cuotas` devuelve `dia`, `diaria`, `limiteDiario` y `generacionHabilitada`. En sílabas solo se ofrecen palabras de 2 a 3 sílabas y en vocales solo las que empiezan con vocal.
 
 ## Cómo arrancar
 

@@ -1,9 +1,11 @@
 const EntradaInvalida = require("../../Compartido/Dominio/Errores/EntradaInvalida");
+const { periodoDiario } = require("../Dominio/Entidades/Periodo");
 
 const DIA = /^\d{4}-\d{2}-\d{2}$/;
 
-// Consulta de solo lectura del consumo diario del propio docente. El contador global es un dato de
-// administración (suma de todos los docentes) y no se expone.
+// Consulta de solo lectura del consumo diario del propio docente y su límite. El día es el calendario de la zona
+// horaria configurada, el mismo que usa la reserva de cupo. El contador global es un dato de administración
+// (suma de todos los docentes) y no se expone.
 class ConsultarCuotas {
   constructor(cuotaRepository, config) {
     this.cuotaRepository = cuotaRepository;
@@ -11,12 +13,13 @@ class ConsultarCuotas {
   }
 
   async ejecutar(docenteId, { dia } = {}) {
-    const periodo = dia || new Date().toISOString().slice(0, 10);
+    const periodo = dia || periodoDiario(new Date(), this.config.zonaHoraria);
     if (!DIA.test(periodo)) throw new EntradaInvalida("dia inválido: use AAAA-MM-DD");
-    // maximoDiario permite a la pantalla mostrar el cupo real sin suponerlo
     return {
+      dia: periodo,
       diaria: await this.cuotaRepository.obtener(docenteId, periodo),
-      ...(this.config && { maximoDiario: this.config.maxDiarias })
+      limiteDiario: this.config.maxDiarias,
+      generacionHabilitada: this.config.habilitada
     };
   }
 }
