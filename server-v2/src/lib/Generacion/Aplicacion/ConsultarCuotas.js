@@ -19,7 +19,9 @@ class ConsultarCuotas {
       dia: periodo,
       diaria: await this.cuotaRepository.obtener(docenteId, periodo),
       limiteDiario: this.config.maxDiarias,
-      generacionHabilitada: this.config.habilitada
+      generacionHabilitada: this.config.habilitada,
+      // La temática libre solo se puede pedir con la IA encendida y su propio interruptor encendido
+      generacionLibreHabilitada: this.config.habilitada && this.config.libreHabilitada
     };
   }
 }

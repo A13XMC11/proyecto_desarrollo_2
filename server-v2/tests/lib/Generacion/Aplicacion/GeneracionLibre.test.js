@@ -285,3 +285,14 @@ describe("Generación libre: fallos, cancelación y conciliación", () => {
     assert.deepEqual(await c.listar.ejecutar(b.docenteId, {}), []);
   });
 });
+
+describe("Generación libre: lo que el cliente necesita saber (cuotas)", () => {
+  prueba("las cuotas informan si la temática libre se puede usar: solo con la IA y el interruptor encendidos", async () => {
+    const esc = await escenario();
+    const informa = async (extra) => (await montar(extra).c.consultarCuotas.ejecutar(esc.docenteId)).generacionLibreHabilitada;
+    assert.equal(await informa({}), true);
+    assert.equal(await informa({ libreHabilitada: false }), false);
+    assert.equal(await informa({ habilitada: false, libreHabilitada: true }), false);
+    assert.equal(await informa({ habilitada: false, libreHabilitada: false }), false);
+  });
+});

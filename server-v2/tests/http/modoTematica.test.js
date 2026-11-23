@@ -82,6 +82,12 @@ describe("HTTP: modo de temática y compatibilidad (paso 3)", () => {
     assert.equal((cuotas.diaria?.consumido || 0) + (cuotas.diaria?.reservado || 0), 0);
   });
 
+  prueba("GET /api/cuotas informa que la temática libre NO está habilitada (interruptor apagado)", async () => {
+    const { docente } = await escenario();
+    const cuotas = (await llamar("/api/cuotas", { docente })).cuerpo;
+    assert.deepEqual([cuotas.generacionHabilitada, cuotas.generacionLibreHabilitada], [true, false]);
+  });
+
   prueba("un modo desconocido es un error de datos (400), no una temática del catálogo", async () => {
     const { docente, curso } = await escenario();
     const r = await llamar("/api/generaciones", {

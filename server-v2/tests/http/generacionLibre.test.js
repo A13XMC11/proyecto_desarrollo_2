@@ -205,6 +205,12 @@ describe("HTTP: temática libre de punta a punta con el generador falso", () => 
     assert.equal((await llamar("/api/generaciones", { docente: esc.docente })).cuerpo.length, 1);
   });
 
+  prueba("GET /api/cuotas informa que la temática libre está habilitada", async () => {
+    const esc = await escenario();
+    const cuotas = (await llamar("/api/cuotas", { docente: esc.docente })).cuerpo;
+    assert.deepEqual([cuotas.generacionHabilitada, cuotas.generacionLibreHabilitada], [true, true]);
+  });
+
   prueba("el modo catálogo sigue funcionando junto al libre y comparte el mismo cupo", async () => {
     const esc = await escenario();
     const libre = await solicitar(esc, { tematica: "colores" });
