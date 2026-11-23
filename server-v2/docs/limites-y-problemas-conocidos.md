@@ -44,6 +44,7 @@ Prioridad: **Alta** si afecta seguridad o datos de personas; **Media** si afecta
 | C7 | **El generador falso no entiende la temática libre.** Solo reconoce por nombre las temáticas de su diccionario de ejemplo (frutas, colores, animales, transporte, escuela, cuerpo y comida); cualquier otra recibe un conjunto genérico de palabras sencillas y el borrador queda marcado como «contenido de ejemplo». Sirve para probar el flujo sin gastar, no para evaluar la calidad pedagógica: eso solo se mide con la IA real (paso 10) | Baja: por diseño |
 | C8 | **La temática libre amplía el SRS y está apagada por defecto.** Cambia el RNF-011 y la restricción del catálogo local revisado (§2.5 y §5.4): el contenido ya no sale solo de una lista cerrada, sino que lo propone la IA y lo controlan el silabeador, el filtro de contenido (C6), la lista de iconos y la aprobación del docente. Debe **validarse con el docente de la asignatura** antes de encender `GENERACION_LIBRE_HABILITADA` | Alta: decisión previa a habilitarla |
 | C9 | **Una generación libre fallida solo deja consultable su código** (por ejemplo `CONTENIDO_INVALIDO` o `GENERADOR_CANDIDATAS_INSUFICIENTES`); el desglose de los descartes (cuántas por contenido, sílabas dudosas…) queda en el registro del servidor, no en la base. El cliente debe traducir el código en un motivo claro (paso 8) | Baja |
+| C10 | **Tres archivos de datos deben revisarlos personas antes de usar la temática libre con niños:** `terminosBloqueados.json` (lo que el filtro bloquea; ver C6), `emojisPermitidos.json` (los 399 iconos de la lista cerrada: que ninguno sea inadecuado o confuso para 5 a 7 años) y `contenidoFalsoLibre.json` (palabras e iconos del generador falso, que pueden verse en una demostración). Las pruebas comprueban que son coherentes entre sí, no que su contenido sea pedagógicamente adecuado | Alta: revisión humana previa a habilitarla |
 
 ### Seguridad
 | # | Problema | Prioridad | Qué haría falta |
@@ -85,6 +86,7 @@ Prioridad: **Alta** si afecta seguridad o datos de personas; **Media** si afecta
 | U1 | En Resultados, la columna «Estudiante» dice «Elige el curso para ver nombres» con el filtro en «Todos» aunque solo exista un curso |
 | U2 | No se ha probado en teléfonos ni tabletas reales ni en otros navegadores que el automatizado |
 | U3 | El recorrido no se midió con herramientas de accesibilidad (la revisión de teclado y foco la hizo Joel en S5-05) |
+| U4 | **Foco del teclado en la temática libre: verificado a mano, sin pruebas automáticas.** Se corrigieron cinco pérdidas de foco (Esc en la lista de iconos, elegir un icono, aprobar, ver la pista y «¡Terminaste!»; ver `aceptacion.md` §6). El cliente solo tiene pruebas de dominio y no puede probar componentes, así que un cambio futuro puede romperlos sin que falle ninguna prueba. **No se probó** con lector de pantalla, en tableta o pantalla táctil, ni el orden completo de Tab (en algunos controles el foco se puso por código), ni con herramientas automáticas de accesibilidad; solo se recorrió contar sílabas con «frutas» |
 
 ## 4. Fuera de alcance (decidido en el plan)
 

@@ -77,8 +77,9 @@ Recorrido en navegador: se generó «Completar la sílaba · Cuerpo humano · 10
 El docente puede pedir actividades sobre cualquier temática (frutas, colores, sonidos de animales, medios de transporte…) además de las 5 del catálogo. **Apagada por defecto**
 (`GENERACION_LIBRE_HABILITADA`). Esto **amplía el SRS** (RNF-011 y la restricción del catálogo local revisado, §2.5 y §5.4) y **debe validarse con el docente de la asignatura**.
 
-Estado a la fecha de este paso (7 de 10): el servidor está conectado de punta a punta con el generador falso; **falta** el cliente (paso 8), las mecánicas de sonido y colores como paso aparte
-(paso 9 — ya decidido que son temáticas libres de las habilidades existentes) y la medición con la IA real (paso 10).
+Estado a la fecha (paso 9 de 10, en cierre): servidor y cliente están conectados de punta a punta **con el generador falso**. **Falta** la medición con la IA real (paso 10), la validación del SRS y la
+revisión humana de las palabras, los iconos y los términos bloqueados. Los colores y «sonidos de animales» son temáticas libres de las habilidades existentes, no mecánicas nuevas; practicar los sonidos
+mismos queda como mejora futura (C5 en `limites-y-problemas-conocidos.md`).
 
 | # | Criterio | Estado | Evidencia |
 |---|---|---|---|
@@ -87,13 +88,52 @@ Estado a la fecha de este paso (7 de 10): el servidor está conectado de punta a
 | 3 | Una temática bloqueada se rechaza antes de gastar cupo ni llamar al generador | **Cumplido** | `GeneracionLibre.test.js`, `generacionLibre.test.js` (política, armas, drogas, letras separadas) |
 | 4 | Interruptor apagado por defecto; con la IA apagada manda GENERACION_DESHABILITADA | **Cumplido** | `GeneracionLibre.test.js`, `ConfiguracionGeneracion.test.js`, `modoTematica.test.js` |
 | 5 | Idempotencia con el modo incluido (otro modo = CLAVE_REUTILIZADA) | **Cumplido** | `GeneracionLibre.test.js`, `generacionLibre.test.js` |
-| 6 | Cada docente solo accede a lo suyo (ids ajenos = 404) | **Cumplido** | `generacionLibre.test.js` |
+| 6 | Cada docente solo accede a lo suyo (ids ajenos = 404) | **Cumplido** | `generacionLibre.test.js`, `clienteHostil.test.js` |
 | 7 | Un rechazo por contenido sigue consumiendo cupo y deja el error consultable sin repetir términos | **Cumplido** | `GeneracionLibre.test.js` |
 | 8 | Lo ya guardado (catálogo) se sigue abriendo y jugando | **Cumplido** | La suite anterior pasa sin cambios, salvo pruebas que fijaban el fail-closed del paso 5 y la lista de claves de la solicitud |
 | 9 | Resultados e inicio funcionan con versiones libres | **Cumplido** | `generacionLibre.test.js` («finalizar a mano, resultados e inicio…») |
-| 10 | La suite completa pasa y las capas siguen limpias | **Cumplido** | `npm test`: 967 de 967, 0 omitidas (con bases reales); `capas.test.js` 8 de 8; Dominio 404; cliente 19 de 19 |
+| 10 | La suite completa pasa y las capas siguen limpias | **Cumplido** | 23 nov, `AI_ENABLED=false PERMITIR_10_EJERCICIOS=true npm test`: **1018 de 1018, 0 fallidas, 0 omitidas** (bases reales de PostgreSQL y MongoDB); `capas.test.js` incluido. Cliente: `node --test` 56 de 56 y `npm run build` compila. Antes (paso 7): 967 de 967 |
 | 11 | Con la IA real: calidad de las palabras, descartes y costo reales | **Pendiente** | Paso 10 (medición real, comparando catálogo y libre) |
-| 12 | Cliente: alternador de modo, campo de temática y aviso de no escribir nombres de estudiantes | **Pendiente** | Paso 8 |
-| 13 | Validación de la ampliación del SRS con el docente de la asignatura | **Pendiente** | Responsable: el equipo |
+| 12 | Cliente: alternador de modo, campo de temática y aviso de no escribir nombres de estudiantes | **Cumplido** (prueba manual con el generador falso + pruebas de dominio) | Ver «Evidencia del paso 8» |
+| 13 | Validación de la ampliación del SRS (RNF-011, §2.5 y §5.4) con el profesor de la asignatura | **Pendiente** | Responsable: el equipo. Sin esto no se enciende `GENERACION_LIBRE_HABILITADA` en un entorno real (C8) |
+| 14 | Un cliente hostil por la API directa no se salta las reglas de la temática libre | **Cumplido** | `tests/http/clienteHostil.test.js`: 26 pruebas (palabras, iconos, hiatos, campos extra, consignas y pistas bloqueadas o repetidas, temáticas inválidas, versiones aprobadas inmutables, ids ajenos 404, sin sesión 401, sin CSRF 403). No se encontró ningún hueco; 5 mutaciones confirman que las pruebas detectan su rotura |
+| 15 | El filtro de contenido también se aplica a la instrucción del docente | **Cumplido** | `8c654c0`: 400 `INSTRUCCION_NO_PERMITIDA` antes de reservar cupo y sin repetir el texto; pruebas en `Generacion.test.js`, `GeneracionLibre.test.js`, `generacionLibre.test.js` |
+| 16 | `npm run revisar:configuracion` avisa de la temática libre y de su incoherencia con la IA | **Cumplido** | `41c1372`; `tests/aceptacion/revisarConfiguracion.test.js` (12 de 12). La corrida final está en «Verificación final» |
+| 17 | Recorrido solo con teclado de la temática libre | **Cumplido con límites** (manual, **sin pruebas automáticas**) | Ver «Revisión de teclado y foco» |
+| 18 | Revisión humana de `terminosBloqueados.json`, `emojisPermitidos.json` y `contenidoFalsoLibre.json`, y de la calidad pedagógica de las palabras por un docente de grados menores | **Pendiente** | Responsable: un docente humano. Hasta entonces el filtro es una defensa parcial (C6) y la aprobación del docente es la garantía real |
+| 19 | Prueba en tableta o teléfono reales, y con lector de pantalla | **Pendiente** | Los iconos son emojis y se ven distinto según el sistema (C3); no se probó en dispositivos reales |
 
-Qué **no** se probó: el recorrido en navegador (no hay pantalla todavía), la IA real, un docente humano revisando palabras e iconos, ni el filtro contra el uso adversarial (es una defensa parcial, ver C6).
+### Evidencia del paso 8 (servidor y cliente)
+
+- **Servidor.** `GET /api/cuotas` informa `generacionLibreHabilitada` (`de1b24f`; `generacionLibre.test.js`, `modoTematica.test.js`, `GeneracionLibre.test.js`). La biblioteca distingue las actividades libres y editar como versión nueva conserva el modo
+  (`48cd309`; `contenidoLibre.test.js`, `VersionConfiguraciones.test.js`). `GET /api/iconos` entrega la lista cerrada de iconos y el servidor la vuelve a comprobar al guardar (`bbbd789`; `EmojisPermitidosJson.test.js`, `contenidoLibre.test.js`).
+- **Cliente** (`14fc959`). Alternador de modo con la opción bloqueada si el servidor no la habilita; campo de temática con contador, ejemplos y aviso de no escribir datos personales; mensajes por código que no repiten lo escrito; estado «generando» con `aria-live` y sin envíos duplicados;
+  revisión del borrador libre (título, consigna, pista e icono; palabra y respuesta de solo lectura); etiqueta de «Temática libre» en la biblioteca. Pruebas de dominio del cliente (`Mensajes`, `TematicaLibre`, `EjerciciosLibres`): de 19 a 56.
+- **Recorrido en navegador (23 nov; generador falso; base de desarrollo; navegador automatizado).** Contar sílabas · «frutas» · 5 ejercicios: pedir (cupo 3 → 2) → revisar (uva 2, papaya 3, manzana 3, guayaba 3, naranja 3) → aprobar → «Editar como versión nueva» y aprobar → jugar con el estudiante A01
+  (un fallo con «Intentar otra vez» y una pista: 5 de 5, 4 al primer intento) y con A02 (5 de 5 al primer intento). Consola sin errores tras una recarga completa.
+
+### Revisión de teclado y foco (paso 9)
+
+Antes de esta revisión, `8102909` hizo visible el foco en las tarjetas de opción y en los campos. Al recorrer la actividad solo con teclado se encontraron y corrigieron **cinco** problemas de foco (en todos, el botón enfocado desaparecía o no cerraba y el foco caía en `BODY`, así que
+la persona volvía al inicio de la página). Cada uno se **reprodujo con teclas reales antes del arreglo** y se **comprobó después**, tras recargar la página:
+
+| | Problema | Arreglo | Commit |
+|---|---|---|---|
+| a | **Esc** no cerraba la lista de iconos | Esc cierra desde el botón o desde dentro de la lista y el foco vuelve al botón | `71a3658` |
+| b | Al **elegir un icono** el foco caía en `BODY` | El foco vuelve al botón «Elegir otro icono» | `71a3658` |
+| c | Al **aprobar** el borrador el foco caía en `BODY` | El foco pasa a «Iniciar en el aula» | `71a3658` |
+| d | Al **ver una pista** (aula) el foco caía en `BODY` | El foco vuelve a la primera opción | `c734c44` |
+| e | En **«¡Terminaste!»** el foco caía en `BODY` | El foco pasa al título de la pantalla; Tab llega a los botones | `c734c44` |
+
+**Son verificaciones manuales. No hay pruebas automáticas de estos cinco arreglos**: el cliente solo tiene pruebas de dominio (`node --test`) y no tiene herramientas para probar componentes, así que un cambio futuro podría romperlos sin que ninguna prueba falle.
+
+**Qué no se probó:**
+- **Lector de pantalla.** Solo se comprobó que los avisos existen en regiones `aria-live`; no se oyó lo que anuncia un lector real.
+- **Tableta, teléfono ni pantalla táctil**, ni otros navegadores que el automatizado.
+- **El orden completo de Tab.** En algunos controles el foco se colocó por código («Elegir un icono», «Aprobar», «Editar como versión nueva», el botón del estudiante) y se comprobó qué pasa al activarlos, no que se llegue a ellos con Tab en el orden esperado.
+- **Herramientas automáticas de accesibilidad.**
+- **Otras habilidades en teclado.** Solo se recorrió contar sílabas con «frutas»; vocales, completar la sílaba y ordenar sílabas (otra mecánica, con su propio componente) se cubren con pruebas HTTP, no con recorrido manual.
+
+### Qué **no** se probó (resumen)
+
+La IA real; un docente humano revisando palabras e iconos; la temática libre en dispositivos reales; el recorrido en navegador de las otras habilidades y de colores o «sonidos de animales»; y el filtro contra el uso adversarial más allá de las 26 pruebas por API (es una defensa parcial, ver C6).
