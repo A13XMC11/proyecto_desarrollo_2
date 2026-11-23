@@ -3,21 +3,48 @@ const IFiltroContenido = require("../Dominio/Ports/IFiltroContenido");
 
 const SUSTITUCIONES = { 0: "o", 1: "i", 3: "e", "@": "a", $: "s" };
 const MIN_LETRAS_POR_PALABRA = 2;
+// "p u t a" o "m.i.e.r.d.a": se unen secuencias de al menos 3 letras sueltas. Con menos no se une nada, así que
+// las palabras de una letra del español ("voy a casa y a la escuela") nunca se pegan entre sí.
+const MIN_LETRAS_SUELTAS_A_UNIR = 3;
+
+// Une las secuencias de letras sueltas seguidas en una sola palabra
+function unirLetrasSueltas(palabras) {
+  const resultado = [];
+  let sueltas = [];
+  const cerrarSecuencia = () => {
+    if (sueltas.length >= MIN_LETRAS_SUELTAS_A_UNIR) resultado.push(sueltas.join(""));
+    else resultado.push(...sueltas);
+    sueltas = [];
+  };
+  for (const palabra of palabras) {
+    if (palabra.length === 1) {
+      sueltas.push(palabra);
+    } else {
+      cerrarSecuencia();
+      resultado.push(palabra);
+    }
+  }
+  cerrarSecuencia();
+  return resultado;
+}
 
 // Deja el texto como una lista de palabras comparables: minúsculas, sin tildes (la ñ se conserva, "coño" no es "cono"),
-// con las sustituciones comunes revertidas (m13rd@ → mierda), sin signos, y con las letras repetidas colapsadas
-// (puuuta → puta). La lista de términos pasa por la misma normalización, así que ambas lados coinciden.
+// con las sustituciones comunes revertidas (m13rd@ → mierda), sin signos, con las letras sueltas unidas (p u t a → puta)
+// y con las letras repetidas colapsadas (puuuta → puta). La lista de términos pasa por la misma normalización,
+// así que ambos lados coinciden.
 function palabrasDe(texto) {
-  return texto
+  const palabras = texto
     .toLowerCase()
     .replace(/[013@$]/g, (c) => SUSTITUCIONES[c])
     .normalize("NFD")
     .replace(/ñ/g, "ñ")
     .replace(/\p{M}/gu, "")
     .replace(/[^a-zñ]+/g, " ")
-    .replace(/(.)\1+/g, "$1")
     .trim()
     .split(" ")
+    .filter(Boolean);
+  return unirLetrasSueltas(palabras)
+    .map((palabra) => palabra.replace(/(.)\1+/g, "$1"))
     .filter(Boolean);
 }
 

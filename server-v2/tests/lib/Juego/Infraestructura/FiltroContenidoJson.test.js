@@ -138,6 +138,55 @@ describe("FiltroContenidoJson: términos bloqueados, por categoría", () => {
   });
 });
 
+describe("FiltroContenidoJson: letras separadas", () => {
+  it("une letras sueltas separadas por espacios, puntos o guiones antes de comparar", () => {
+    assert.equal(filtro.evaluar("p u t a").categoria, "insultos");
+    assert.equal(filtro.evaluar("m.i.e.r.d.a").categoria, "insultos");
+    assert.equal(filtro.evaluar("m-i-e-r-d-a").categoria, "insultos");
+    assert.equal(filtro.evaluar("m . i . e . r . d . a").categoria, "insultos");
+    assert.equal(filtro.evaluar("P U T A").categoria, "insultos");
+    assert.equal(filtro.evaluar("d r 0 g a").categoria, "drogas_alcohol");
+    assert.equal(filtro.evaluar("s e x o").categoria, "sexualidad");
+  });
+
+  it("combina con plurales, letras repetidas y frases", () => {
+    assert.equal(filtro.evaluar("p u t a s").categoria, "insultos");
+    assert.equal(filtro.evaluar("p u u u t a").categoria, "insultos");
+    assert.equal(filtro.evaluar("eres una p u t a ahora").categoria, "insultos");
+    assert.equal(filtro.evaluar("c.o.c.a c.o.l.a").categoria, "marcas_comerciales");
+  });
+
+  it("el resultado sigue sin repetir el término", () => {
+    assert.deepEqual(filtro.evaluar("m.i.e.r.d.a"), { permitido: false, categoria: "insultos" });
+  });
+
+  it("las vocales y las letras sueltas inocentes no dan falsos positivos", () => {
+    for (const texto of ["a e i o u", "A E I O U", "a, e, i, o, u", "a-e-i-o-u", "las vocales a e i o u son cinco",
+      "U S A", "O N U", "T V", "a b c d e f g", "A B C"]) {
+      assert.deepEqual(filtro.evaluar(texto), { permitido: true }, texto);
+    }
+  });
+
+  it("palabras inocentes deletreadas, o con letras sueltas dentro de una frase, pasan", () => {
+    for (const texto of ["g a t o", "l u n a", "m a m á", "m a n o", "p i e", "c o m p u t a d o r a", "a r m a r i o",
+      "c í r c u l o", "s e x t o", "voy a casa y a la escuela", "tú y yo a las 3", "y a e", "o u a"]) {
+      assert.deepEqual(filtro.evaluar(texto), { permitido: true }, texto);
+    }
+  });
+
+  it("solo une secuencias de 3 o más letras sueltas: una o dos no forman una palabra", () => {
+    // "m e" y "a s" son letras sueltas de dos en dos separadas por una palabra completa: no se unen entre sí
+    assert.deepEqual(filtro.evaluar("m e casa a s"), { permitido: true });
+    assert.deepEqual(filtro.evaluar("p u"), { permitido: true });
+  });
+
+  it("no cambia el comportamiento de las palabras normales", () => {
+    assert.equal(filtro.evaluar("puta").categoria, "insultos");
+    assert.deepEqual(filtro.evaluar("computadora"), { permitido: true });
+    assert.deepEqual(filtro.evaluar("a casa y a la escuela"), { permitido: true });
+  });
+});
+
 describe("FiltroContenidoJson: el resultado no repite lo bloqueado", () => {
   it("devuelve solo la categoría, nunca el término ni el texto", () => {
     for (const [categoria, terminos] of Object.entries(BLOQUEADAS)) {

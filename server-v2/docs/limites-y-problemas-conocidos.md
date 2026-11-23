@@ -39,6 +39,8 @@ Prioridad: **Alta** si afecta seguridad o datos de personas; **Media** si afecta
 | C2 | Aún no hay mecánica de emparejar, enfoque estructurado («practicar A y E»), palabras propuestas por la IA ni catálogo que crezca solo | Media: propuesto en el plan §15b |
 | C3 | Los iconos son emojis: se ven distinto según el sistema (Android, iOS, Windows). No se probaron en tabletas reales | Media |
 | C4 | Algunas palabras no tienen icono (mesa, espalda, estómago, pizarra) | Baja |
+| C5 | **Onomatopeyas.** En la temática libre (en desarrollo en la rama `feature/generacion-libre`), «sonidos de animales» genera ejercicios con los **nombres** de los animales (perro, gato, vaca…), no con sus sonidos. El silabeador rechaza las onomatopeyas (guau, miau, muu, pío, cuac, beee, oink) por tener una sola sílaba, vocales repetidas o consonantes finales dudosas, y no se adivinan. Practicarlas es una **mejora futura** que requiere una mecánica nueva, fuera de las habilidades de lectoescritura actuales | Media: mejora futura |
+| C6 | **El filtro de contenido infantil es una defensa parcial.** Bloquea por lista (política, religión, violencia, armas, drogas y alcohol, sexualidad, enfermedades, muerte y miedo, marcas e insultos) y no detecta todo lo inadecuado: un insulto o un tema que no esté en la lista pasa, y una palabra inocente de la lista se bloquea. La lista (`terminosBloqueados.json`) debe revisarla un docente. La aprobación del docente es la garantía real | Media |
 
 ### Seguridad
 | # | Problema | Prioridad | Qué haría falta |
