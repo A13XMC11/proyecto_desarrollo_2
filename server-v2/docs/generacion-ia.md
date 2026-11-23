@@ -184,6 +184,30 @@ En `completar_silaba` y `contar_silabas` la IA decide **menos** que en vocales, 
 La validación comprueba de forma determinista, contra la división silábica aprobada del catálogo: que el objetivo tenga el hueco único y las sílabas de la palabra, que la respuesta sea la sílaba que falta (o el número de sílabas) y que el icono sea el del recurso.
 Un `indiceFaltante` fuera de rango o una palabra inventada terminan en `CONTENIDO_INVALIDO`. Los ejercicios llevan el `icono` (emoji) del recurso, si lo tiene.
 
+### Temática libre: validación del contenido (rama `feature/generacion-libre`, paso 4)
+
+En una temática libre no hay catálogo: la palabra la trae el ejercicio y el servidor lo comprueba todo con `ValidacionContenidoLibre`
+(el modo catálogo sigue con `ValidacionContenido`, sin cambios). Aún **no** se genera con IA en este modo: solo se valida y se aprueba lo que ya
+exista (datos fabricados a mano en las pruebas); la solicitud de generación libre sigue rechazada hasta el paso 7.
+
+| Habilidad | La palabra va en | Opciones / piezas | El servidor calcula |
+|---|---|---|---|
+| `vocales` | `objetivo` | 3 vocales | la vocal inicial (la palabra debe empezar con vocal) |
+| `contar_silabas` | `objetivo` | 3 números del 1 al 9 | el número de sílabas (2 a 4) |
+| `completar_silaba` | `palabraId` (el estudiante no la ve); `objetivo` trae sus sílabas con un hueco (`pe __`) | 3 sílabas | la sílaba del hueco (palabra de 2 a 4 sílabas) |
+| `palabras_silabas` | `palabraId`; `piezas` y `ordenCorrecto` | piezas | el orden (palabra de 2 a 3 sílabas) |
+
+Reglas comunes, todas en el servidor: la palabra tiene solo letras del español (2 a 15), no se repite en la actividad y pasa el filtro de
+contenido infantil; las sílabas las calcula el `Silabeador` y, si duda (hiatos, `tl`, `-iar`…), la palabra se rechaza con el motivo; la división que
+propone el ejercicio debe coincidir con la del servidor; la respuesta correcta aparece una sola vez entre opciones distintas; la consigna y la pista
+no pueden contener la palabra, la vocal ni el número de sílabas, y deben estar escritas con palabras (no solo símbolos ni colores); `recursoId` no
+se usa. El **icono es opcional** y, si viene, debe estar en la lista cerrada `emojis/emojisPermitidos.json` (399 iconos de animales, frutas, verduras,
+objetos, naturaleza, cuerpo, escuela, comida, transporte y juguetes; sin círculos ni cuadrados de color, armas, alcohol ni nada que dé miedo).
+Los colores se enseñan con el nombre escrito: ningún campo depende solo del color.
+
+Los mensajes de rechazo hablan al docente («no se puede dividir «león» en sílabas con seguridad… Elige otra palabra») y **nunca repiten el término
+que bloqueó el filtro**. El filtro se aplica a cada palabra y a la temática, no a la consigna ni a la pista: la aprobación del docente sigue siendo la garantía real.
+
 ## 4. Ejemplos
 
 ### Respuestas válidas

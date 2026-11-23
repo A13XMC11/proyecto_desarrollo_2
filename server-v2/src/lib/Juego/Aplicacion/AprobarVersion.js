@@ -4,11 +4,14 @@ const ConflictoDeEstado = require("../../Compartido/Dominio/Errores/ConflictoDeE
 // Aprobar deja la versión inmutable y la hace la vigente del juego (que pasa a "listo").
 // Antes de aprobar se valida el contenido completo contra el catálogo vigente (RF-021).
 class AprobarVersion {
-  constructor(versionRepository, juegoRepository, catalogo, { permitirDiez = false } = {}) {
+  // filtroContenido y emojisPermitidos (puertos) solo los usa la validación de una temática libre
+  constructor(versionRepository, juegoRepository, catalogo, { permitirDiez = false, filtroContenido, emojisPermitidos } = {}) {
     this.versionRepository = versionRepository;
     this.juegoRepository = juegoRepository;
     this.catalogo = catalogo;
     this.permitirDiez = permitirDiez;
+    this.filtroContenido = filtroContenido;
+    this.emojisPermitidos = emojisPermitidos;
   }
 
   async ejecutar(docenteId, juegoId, id) {
@@ -19,7 +22,9 @@ class AprobarVersion {
     if (version.estado !== "borrador") {
       throw new ConflictoDeEstado("Solo se puede aprobar un borrador", "VERSION_NO_APROBABLE");
     }
-    version.validarContenido(this.catalogo, { permitirDiez: this.permitirDiez });
+    version.validarContenido(this.catalogo, {
+      permitirDiez: this.permitirDiez, filtroContenido: this.filtroContenido, emojisPermitidos: this.emojisPermitidos
+    });
 
     const aprobada = await this.versionRepository.aprobar(id, juego.id);
     if (!aprobada) throw new ConflictoDeEstado("Solo se puede aprobar un borrador", "VERSION_NO_APROBABLE");

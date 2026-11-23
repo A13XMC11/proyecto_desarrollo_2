@@ -32,6 +32,12 @@ class Ejercicio {
       }
     }
 
+    // En una temática libre, "completar la sílaba" declara en palabraId la palabra completa (el estudiante no la ve):
+    // de ella el servidor calcula la sílaba que falta. En el catálogo no se usa y no se guarda.
+    if (piezas === undefined && palabraId !== undefined && palabraId !== null && palabraId !== "") {
+      this.palabraId = identificador(palabraId, "palabraId");
+    }
+
     if (piezas !== undefined) {
       if (!Array.isArray(piezas) || !Array.isArray(ordenCorrecto)) {
         throw new EntradaInvalida("piezas y ordenCorrecto son obligatorios juntos");

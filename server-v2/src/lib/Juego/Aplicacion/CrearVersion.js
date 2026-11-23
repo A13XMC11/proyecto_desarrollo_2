@@ -4,11 +4,14 @@ const NoEncontrado = require("../../Compartido/Dominio/Errores/NoEncontrado");
 // Crea un borrador de versión. La habilidad y la mecánica salen del juego.
 // El contenido se valida contra el catálogo; un borrador puede estar incompleto (la aprobación sí exige todo).
 class CrearVersion {
-  constructor(versionRepository, juegoRepository, catalogo, { permitirDiez = false } = {}) {
+  // filtroContenido y emojisPermitidos (puertos) solo los usa la validación de una temática libre
+  constructor(versionRepository, juegoRepository, catalogo, { permitirDiez = false, filtroContenido, emojisPermitidos } = {}) {
     this.versionRepository = versionRepository;
     this.juegoRepository = juegoRepository;
     this.catalogo = catalogo;
     this.permitirDiez = permitirDiez;
+    this.filtroContenido = filtroContenido;
+    this.emojisPermitidos = emojisPermitidos;
   }
 
   async ejecutar(docenteId, juegoId, { tematica, cantidadEjercicios, ejercicios = [] } = {}) {
@@ -21,7 +24,9 @@ class CrearVersion {
       configuracion: { habilidad: juego.habilidad, mecanica: juego.mecanica, tematica, cantidadEjercicios },
       ejercicios
     });
-    version.validarContenido(this.catalogo, { permitirDiez: this.permitirDiez, exigirCantidad: false });
+    version.validarContenido(this.catalogo, {
+      permitirDiez: this.permitirDiez, exigirCantidad: false, filtroContenido: this.filtroContenido, emojisPermitidos: this.emojisPermitidos
+    });
     return await this.versionRepository.save(version);
   }
 }

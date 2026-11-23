@@ -6,11 +6,14 @@ const EntradaInvalida = require("../../Compartido/Dominio/Errores/EntradaInvalid
 // Solo se editan los ejercicios, y solo mientras la versión sea un borrador.
 // Tras cada edición se valida de nuevo contra el catálogo (RF-022).
 class ActualizarVersion {
-  constructor(versionRepository, juegoRepository, catalogo, { permitirDiez = false } = {}) {
+  // filtroContenido y emojisPermitidos (puertos) solo los usa la validación de una temática libre
+  constructor(versionRepository, juegoRepository, catalogo, { permitirDiez = false, filtroContenido, emojisPermitidos } = {}) {
     this.versionRepository = versionRepository;
     this.juegoRepository = juegoRepository;
     this.catalogo = catalogo;
     this.permitirDiez = permitirDiez;
+    this.filtroContenido = filtroContenido;
+    this.emojisPermitidos = emojisPermitidos;
   }
 
   async ejecutar(docenteId, juegoId, id, { ejercicios } = {}) {
@@ -25,7 +28,9 @@ class ActualizarVersion {
 
     VersionJuego.rechazarCamposDesconocidos(ejercicios);
     const validada = new VersionJuego({ ...actual, ejercicios });
-    validada.validarContenido(this.catalogo, { permitirDiez: this.permitirDiez, exigirCantidad: false });
+    validada.validarContenido(this.catalogo, {
+      permitirDiez: this.permitirDiez, exigirCantidad: false, filtroContenido: this.filtroContenido, emojisPermitidos: this.emojisPermitidos
+    });
     const actualizada = await this.versionRepository.actualizarBorrador(id, juego.id, { ejercicios: validada.ejercicios });
     if (!actualizada) throw new ConflictoDeEstado("Solo se puede editar un borrador", "VERSION_NO_EDITABLE");
     return actualizada;

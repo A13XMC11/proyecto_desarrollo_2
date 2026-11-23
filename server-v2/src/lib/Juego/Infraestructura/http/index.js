@@ -8,6 +8,8 @@ const RecursoController = require("./RecursoController");
 const JuegoRepositoryMongoose = require("../JuegoRepositoryMongoose");
 const VersionRepositoryMongoose = require("../VersionRepositoryMongoose");
 const CatalogoRecursosJson = require("../CatalogoRecursosJson");
+const FiltroContenidoJson = require("../FiltroContenidoJson");
+const EmojisPermitidosJson = require("../EmojisPermitidosJson");
 // El módulo Juego consulta cursos y estudiantes (PostgreSQL) a través de sus repositorios
 const CursoRepositorySequelize = require("../../../Aula/Infraestructura/CursoRepositorySequelize");
 const EstudianteRepositorySequelize = require("../../../Aula/Infraestructura/EstudianteRepositorySequelize");
@@ -31,7 +33,13 @@ module.exports = function registerJuegoModule(app) {
   const versionRepo = new VersionRepositoryMongoose();
   // Si el catálogo es incoherente, el servidor no arranca. Los 10 ejercicios están habilitados por defecto (sprint 7); PERMITIR_10_EJERCICIOS=false los apaga.
   const catalogo = new CatalogoRecursosJson();
-  const validacion = { permitirDiez: process.env.PERMITIR_10_EJERCICIOS !== "false" };
+  // El filtro de contenido y la lista de iconos permitidos solo los usa la validación de una temática libre (como el
+  // catálogo, si están mal armados el servidor no arranca). Los casos de uso del catálogo no los tocan.
+  const validacion = {
+    permitirDiez: process.env.PERMITIR_10_EJERCICIOS !== "false",
+    filtroContenido: new FiltroContenidoJson(),
+    emojisPermitidos: new EmojisPermitidosJson()
+  };
 
   const juegoController = new JuegoController({
     crearJuego: new CrearJuego(repo, new CursoRepositorySequelize(), new EstudianteRepositorySequelize()),

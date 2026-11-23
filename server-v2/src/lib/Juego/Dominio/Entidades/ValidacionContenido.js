@@ -1,4 +1,5 @@
 const EntradaInvalida = require("../../../Compartido/Dominio/Errores/EntradaInvalida");
+const { validarContenidoLibre } = require("./ValidacionContenidoLibre");
 
 const CAMPOS_EJERCICIO = [
   "id", "consigna", "pista", "objetivo", "recursoId", "icono", "opciones", "respuestaCorrectaId",
@@ -153,7 +154,11 @@ const VALIDADORES = {
 
 // exigirCantidad: false valida solo los ejercicios presentes (un borrador puede estar incompleto);
 // la aprobación siempre lo exige.
-function validarContenido(version, catalogo, { permitirDiez = false, exigirCantidad = true } = {}) {
+function validarContenido(version, catalogo, opciones = {}) {
+  // Una temática libre no tiene catálogo: la valida otro camino, con el filtro y la lista de iconos que recibe en `opciones`.
+  // El camino del catálogo, abajo, queda igual que siempre.
+  if (version.configuracion.modoTematica === "libre") return validarContenidoLibre(version, opciones);
+  const { permitirDiez = false, exigirCantidad = true } = opciones;
   if (!catalogo || typeof catalogo.obtenerRecurso !== "function") {
     throw new EntradaInvalida("catálogo de recursos requerido");
   }
