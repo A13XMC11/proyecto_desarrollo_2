@@ -6,7 +6,10 @@ const FRANJAS_EDAD = [5, 6, 7];
 
 const HABILIDADES = ["vocales", "palabras_silabas", "completar_silaba", "contar_silabas"];
 const MECANICAS = ["seleccionar_opcion", "ordenar_silabas"];
+// TEMATICAS es la lista del catálogo revisado. En modo "libre" la temática es un texto corto del docente
+// (ver Validaciones.tematicaLibre) y no pertenece a esta lista.
 const TEMATICAS = ["animales", "objetos_cotidianos", "naturaleza", "cuerpo", "escuela"];
+const MODOS_TEMATICA = ["catalogo", "libre"];
 const CANTIDADES_EJERCICIOS = [5, 10];
 
 // Compatibilidad habilidad -> mecánica
@@ -51,6 +54,7 @@ module.exports = {
   HABILIDADES,
   MECANICAS,
   TEMATICAS,
+  MODOS_TEMATICA,
   CANTIDADES_EJERCICIOS,
   COMPATIBILIDAD,
   ORIGENES_JUEGO,

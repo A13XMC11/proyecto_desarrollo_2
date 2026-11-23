@@ -1,7 +1,7 @@
 const { DataTypes, Op } = require("sequelize");
 const { obtenerSequelize } = require("../../../Infraestructura/database/Sequelize");
 const {
-  HABILIDADES, TEMATICAS, CANTIDADES_EJERCICIOS, ESTADOS_GENERACION
+  HABILIDADES, MODOS_TEMATICA, CANTIDADES_EJERCICIOS, ESTADOS_GENERACION
 } = require("../../Compartido/Dominio/ValoresPermitidos");
 
 const sequelize = obtenerSequelize();
@@ -20,7 +20,10 @@ const GeneracionModel = sequelize.define(
     juegoId: { type: DataTypes.STRING(24), unique: true, validate: { is: OBJECT_ID } },
     claveSolicitud: { type: DataTypes.STRING(64), allowNull: false, validate: { len: [16, 64] } },
     habilidad: { type: DataTypes.ENUM(...HABILIDADES), allowNull: false },
-    tematica: { type: DataTypes.ENUM(...TEMATICAS), allowNull: false },
+    // Del catálogo es una de TEMATICAS; en modo libre, el texto del docente (3 a 40 letras y espacios). Por eso es
+    // texto y no un ENUM: la entidad valida cada modo. Bases existentes: ver docs/recuperacion.md (paso manual).
+    modoTematica: { type: DataTypes.ENUM(...MODOS_TEMATICA), allowNull: false, defaultValue: "catalogo" },
+    tematica: { type: DataTypes.STRING(40), allowNull: false },
     cantidad: { type: DataTypes.SMALLINT, allowNull: false, validate: { isIn: [CANTIDADES_EJERCICIOS] } },
     instruccion: { type: DataTypes.STRING(500) },
     estado: { type: DataTypes.ENUM(...ESTADOS_GENERACION), allowNull: false, defaultValue: "pendiente" },

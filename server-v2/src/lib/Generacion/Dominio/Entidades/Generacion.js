@@ -1,10 +1,27 @@
 const EntradaInvalida = require("../../../Compartido/Dominio/Errores/EntradaInvalida");
 const {
-  HABILIDADES, MECANICAS, TEMATICAS, CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, COMPATIBILIDAD
+  HABILIDADES, MECANICAS, TEMATICAS, MODOS_TEMATICA, CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, COMPATIBILIDAD
 } = require("../../../Compartido/Dominio/ValoresPermitidos");
 const {
-  textoPlano, enumerado, identificador, fechaOpcional
+  textoPlano, enumerado, identificador, fechaOpcional, tematicaLibre
 } = require("../../../Compartido/Dominio/Validaciones");
+
+// En modo catálogo la temática es del enum, igual que siempre. En modo libre es el texto del docente, normalizado.
+// Una generación NUEVA (sin id) con temática libre debe pasar el filtro de contenido infantil (puerto IFiltroContenido).
+// Una ya guardada (con id) solo se lee: si la lista de términos cambiara después, no puede dejar de poder leerse.
+function validarTematica({ id, modoTematica, tematica, filtroContenido }) {
+  if (modoTematica !== "libre") return enumerado(tematica, TEMATICAS, "tematica");
+  const texto = tematicaLibre(tematica, "tematica");
+  if (id) return texto;
+  if (!filtroContenido || typeof filtroContenido.evaluar !== "function") {
+    throw new EntradaInvalida("Hace falta el filtro de contenido para validar una temática libre", "FILTRO_CONTENIDO_REQUERIDO");
+  }
+  if (!filtroContenido.evaluar(texto).permitido) {
+    // El mensaje no repite la temática ni dice qué término la bloqueó
+    throw new EntradaInvalida("Esa temática no está permitida en actividades para niños. Prueba con otra.", "TEMATICA_NO_PERMITIDA");
+  }
+  return texto;
+}
 
 function noNegativo(valor, campo) {
   if (valor === undefined || valor === null) return undefined;
@@ -18,7 +35,7 @@ class Generacion {
   constructor({
     id, docenteId, canalId, claveSolicitud, parametros, estado = "pendiente", proveedor, modelo,
     tokensEntrada, tokensSalida, usoDesconocido = false, reserva, errorCodigo, juegoId,
-    creadaEn, finalizadaEn, actualizadoEn
+    creadaEn, finalizadaEn, actualizadoEn, filtroContenido
   }) {
     if (typeof claveSolicitud !== "string" || claveSolicitud.length < 16 || claveSolicitud.length > 64) {
       throw new EntradaInvalida("claveSolicitud debe tener de 16 a 64 caracteres");
@@ -33,6 +50,8 @@ class Generacion {
       }
     }
     if (typeof usoDesconocido !== "boolean") throw new EntradaInvalida("usoDesconocido inválido");
+    // Sin modoTematica es del catálogo: así se leen las generaciones guardadas antes de existir el modo
+    const modoTematica = parametros.modoTematica === undefined ? "catalogo" : enumerado(parametros.modoTematica, MODOS_TEMATICA, "modoTematica");
 
     this.id = identificador(id, "id", { requerido: false });
     this.docenteId = identificador(docenteId, "docenteId");
@@ -42,7 +61,8 @@ class Generacion {
       cursoId: identificador(parametros.cursoId, "cursoId"),
       estudianteId: identificador(parametros.estudianteId, "estudianteId", { requerido: false }),
       habilidad: parametros.habilidad,
-      tematica: enumerado(parametros.tematica, TEMATICAS, "tematica"),
+      modoTematica,
+      tematica: validarTematica({ id, modoTematica, tematica: parametros.tematica, filtroContenido }),
       cantidad: enumerado(parametros.cantidad, CANTIDADES_EJERCICIOS, "cantidad"),
       instruccion: textoPlano(parametros.instruccion, "instruccion", { max: 500 })
     };

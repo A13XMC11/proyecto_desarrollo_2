@@ -3,10 +3,12 @@ const {
   HABILIDADES,
   MECANICAS,
   TEMATICAS,
+  MODOS_TEMATICA,
   CANTIDADES_EJERCICIOS,
   ESTADOS_VERSION,
   COMPATIBILIDAD
 } = require("../../Compartido/Dominio/ValoresPermitidos");
+const { esTematicaLibre } = require("../../Compartido/Dominio/Validaciones");
 
 const OpcionSchema = new Schema(
   {
@@ -63,7 +65,22 @@ const VersionJuegoSchema = new Schema(
           message: "La mecánica no es compatible con la habilidad"
         }
       },
-      tematica: { type: String, required: true, enum: TEMATICAS },
+      // Las versiones guardadas antes de existir el modo no tienen este campo: se leen como "catalogo" (no se migran)
+      modoTematica: { type: String, enum: MODOS_TEMATICA, default: "catalogo" },
+      // Del catálogo: una de TEMATICAS. Libre: texto de 3 a 40 letras y espacios, normalizado por la entidad
+      tematica: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: 40,
+        validate: {
+          validator(valor) {
+            const modo = (this.configuracion && this.configuracion.modoTematica) || "catalogo";
+            return modo === "libre" ? esTematicaLibre(valor) : TEMATICAS.includes(valor);
+          },
+          message: "tematica inválida para el modo de temática"
+        }
+      },
       cantidadEjercicios: { type: Number, required: true, enum: CANTIDADES_EJERCICIOS }
     },
     ejercicios: { type: [EjercicioSchema], default: [] },

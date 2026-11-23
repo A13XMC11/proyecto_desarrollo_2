@@ -37,6 +37,7 @@ class GeneracionRepositorySequelize {
         cursoId: p.cursoId,
         estudianteId: p.estudianteId,
         habilidad: p.habilidad,
+        modoTematica: p.modoTematica,
         tematica: p.tematica,
         cantidad: p.cantidad,
         instruccion: p.instruccion,
@@ -237,6 +238,7 @@ class GeneracionRepositorySequelize {
         cursoId: fila.cursoId,
         estudianteId: sinNulo(fila.estudianteId),
         habilidad: fila.habilidad,
+        modoTematica: fila.modoTematica,
         tematica: fila.tematica,
         cantidad: fila.cantidad,
         instruccion: sinNulo(fila.instruccion)

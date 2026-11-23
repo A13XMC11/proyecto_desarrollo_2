@@ -7,7 +7,7 @@ const ServicioNoDisponible = require("../../Compartido/Dominio/Errores/ServicioN
 const CANAL_POR_DEFECTO = "docente_computador";
 
 const mismosParametros = (a, b) =>
-  ["cursoId", "estudianteId", "habilidad", "tematica", "cantidad", "instruccion"].every((campo) => a[campo] === b[campo]);
+  ["cursoId", "estudianteId", "habilidad", "modoTematica", "tematica", "cantidad", "instruccion"].every((campo) => a[campo] === b[campo]);
 
 // Pide una actividad con IA (RF-019, RF-023, RF-024). Pasos 1 a 4 del flujo; la llamada al generador
 // y el guardado los hace ProcesarGeneracion. Idempotente por (docente, claveSolicitud): repetir la misma
@@ -17,8 +17,10 @@ const mismosParametros = (a, b) =>
 // Si la solicitud se rechaza antes de llamar al proveedor (apagada, otra en curso, sin cupo) la generación
 // queda "fallida" con su código, la reserva se libera y el rechazo se informa como error.
 class SolicitarGeneracion {
-  constructor({ generacionRepository, cursoRepository, estudianteRepository, canalRepository, config, reservarCupo, liberarReserva, procesarGeneracion, conciliar }) {
-    Object.assign(this, { generacionRepository, cursoRepository, estudianteRepository, canalRepository, config, reservarCupo, liberarReserva, procesarGeneracion, conciliar });
+  // filtroContenido (puerto IFiltroContenido) es opcional: sin él la temática libre no está disponible. Hasta el
+  // paso 7 la composición real no lo entrega, así que por HTTP solo se admite el modo catálogo.
+  constructor({ generacionRepository, cursoRepository, estudianteRepository, canalRepository, config, reservarCupo, liberarReserva, procesarGeneracion, conciliar, filtroContenido }) {
+    Object.assign(this, { generacionRepository, cursoRepository, estudianteRepository, canalRepository, config, reservarCupo, liberarReserva, procesarGeneracion, conciliar, filtroContenido });
   }
 
   async ejecutar(docenteId, claveSolicitud, data = {}) {
@@ -60,6 +62,10 @@ class SolicitarGeneracion {
 
   // Pasos 1 y 2: propiedad, estado de curso y estudiante, y parámetros válidos
   async armar(docenteId, claveSolicitud, data) {
+    // Falla cerrado: sin filtro de contenido no se acepta una temática libre, y se dice antes de guardar o reservar nada
+    if (data.modoTematica === "libre" && !this.filtroContenido) {
+      throw new EntradaInvalida("La temática libre todavía no está disponible", "TEMATICA_LIBRE_NO_DISPONIBLE");
+    }
     const curso = await this.cursoRepository.findById(data.cursoId, docenteId);
     if (!curso) throw new NoEncontrado("Curso no encontrado");
     if (curso.archivado) throw new ConflictoDeEstado("El curso está archivado", "CURSO_ARCHIVADO");
@@ -75,10 +81,10 @@ class SolicitarGeneracion {
     if (data.cantidad === 10 && !this.config.permitirDiez) throw new EntradaInvalida("La cantidad de 10 ejercicios no está habilitada");
 
     return new Generacion({
-      docenteId, canalId: canal.id, claveSolicitud,
+      docenteId, canalId: canal.id, claveSolicitud, filtroContenido: this.filtroContenido,
       parametros: {
         cursoId: curso.id, estudianteId: data.estudianteId, habilidad: data.habilidad,
-        tematica: data.tematica, cantidad: data.cantidad, instruccion: data.instruccion
+        modoTematica: data.modoTematica, tematica: data.tematica, cantidad: data.cantidad, instruccion: data.instruccion
       }
     });
   }

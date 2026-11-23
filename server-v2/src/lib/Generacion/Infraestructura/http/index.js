@@ -56,7 +56,8 @@ function verificarCostoMaximo(config, generador) {
 
 // Arma los casos de uso con sus repositorios. Se exporta para que las pruebas usen el mismo cableado
 // con otra configuración o con un generador de pruebas.
-function componer({ config, generador }) {
+// filtroContenido (opcional) habilita la temática libre; registerGeneracionModule todavía no lo entrega (paso 7).
+function componer({ config, generador, filtroContenido }) {
   const repo = new GeneracionRepositorySequelize();
   const cuotaRepo = new CuotaRepositorySequelize();
   const estudianteRepo = new EstudianteRepositorySequelize();
@@ -76,7 +77,7 @@ function componer({ config, generador }) {
     repo, cuotaRepo, juegoRepo, versionRepo, liberarReserva, conciliar, reservarCupo, procesarGeneracion,
     solicitar: new SolicitarGeneracion({
       generacionRepository: repo, cursoRepository: new CursoRepositorySequelize(), estudianteRepository: estudianteRepo,
-      canalRepository: new CanalRepositoryMongoose(), config, procesarGeneracion, liberarReserva, conciliar, reservarCupo
+      canalRepository: new CanalRepositoryMongoose(), config, procesarGeneracion, liberarReserva, conciliar, reservarCupo, filtroContenido
     }),
     listar: new ListarGeneraciones(repo, conciliar),
     obtener: new ObtenerGeneracion(repo, conciliar),

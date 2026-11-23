@@ -34,6 +34,28 @@ function icono(valor, campo) {
   return valor;
 }
 
+// Temática libre del docente: solo letras del español y espacios sueltos, de 3 a 40 caracteres.
+// Ya normalizada (sin espacios de más ni mayúsculas) es lo que se guarda y se compara.
+const ES_TEMATICA_LIBRE = /^[a-záéíóúüñ]+(?: [a-záéíóúüñ]+)*$/;
+const MIN_TEMATICA_LIBRE = 3;
+const MAX_TEMATICA_LIBRE = 40;
+
+function esTematicaLibre(valor) {
+  return typeof valor === "string" && valor.length >= MIN_TEMATICA_LIBRE && valor.length <= MAX_TEMATICA_LIBRE && ES_TEMATICA_LIBRE.test(valor);
+}
+
+// Normaliza (tilde compuesta, minúsculas, un solo espacio entre palabras) y valida. El mensaje nombra el campo y
+// nunca repite lo recibido. Cualquier otro espacio en blanco (tabulador, salto de línea) se rechaza.
+function tematicaLibre(valor, campo = "tematica") {
+  if (typeof valor !== "string") throw new EntradaInvalida(`${campo} debe ser texto`);
+  const texto = valor.normalize("NFC").toLowerCase().replace(/ {2,}/g, " ").replace(/^ | $/g, "");
+  if (texto === "") throw new EntradaInvalida(`${campo} requerido`);
+  if (!esTematicaLibre(texto)) {
+    throw new EntradaInvalida(`${campo} debe tener solo letras y espacios, de ${MIN_TEMATICA_LIBRE} a ${MAX_TEMATICA_LIBRE} caracteres`);
+  }
+  return texto;
+}
+
 function enumerado(valor, permitidos, campo, { requerido = true } = {}) {
   if ((valor === undefined || valor === null) && !requerido) return undefined;
   if (!permitidos.includes(valor)) {
@@ -79,4 +101,4 @@ function fusionarCambios(actual, cambios, campos) {
   return { datos, escritura };
 }
 
-module.exports = { textoPlano, enumerado, icono, identificador, entero, fechaOpcional, fusionarCambios };
+module.exports = { textoPlano, enumerado, icono, identificador, entero, fechaOpcional, fusionarCambios, tematicaLibre, esTematicaLibre };

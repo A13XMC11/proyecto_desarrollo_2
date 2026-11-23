@@ -109,6 +109,8 @@ class VersionRepositoryMongoose {
       configuracion: {
         habilidad: doc.configuracion.habilidad,
         mecanica: doc.configuracion.mecanica,
+        // Los documentos anteriores al modo de temática no lo traen: son del catálogo
+        modoTematica: doc.configuracion.modoTematica || "catalogo",
         tematica: doc.configuracion.tematica,
         cantidadEjercicios: doc.configuracion.cantidadEjercicios
       },

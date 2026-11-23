@@ -20,6 +20,12 @@ export const TEMATICAS = {
   escuela: "Escuela"
 };
 
+// Del catálogo revisado (las temáticas de arriba) o libre (un texto corto que escribe el docente)
+export const MODOS_TEMATICA = {
+  catalogo: "Temática del catálogo",
+  libre: "Otra temática"
+};
+
 export const ESTADOS_JUEGO = {
   borrador: { texto: "Borrador", tono: "ambar" },
   listo: { texto: "Lista", tono: "verde" },

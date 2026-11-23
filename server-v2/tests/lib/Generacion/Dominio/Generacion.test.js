@@ -68,3 +68,75 @@ describe("Entidad Cuota", () => {
     }
   });
 });
+
+describe("Entidad Generacion: modo de temática (paso 3)", () => {
+  // Un filtro falso que cumple el puerto IFiltroContenido: bloquea solo la palabra "armas"
+  const filtro = { evaluar: (texto) => (/\barmas\b/i.test(texto) ? { permitido: false, categoria: "armas" } : { permitido: true }) };
+  const { mecanica, ...base } = gen.parametros;
+  const libre = (tematica, extra = {}) => ({ ...gen, filtroContenido: filtro, parametros: { ...base, modoTematica: "libre", tematica }, ...extra });
+
+  it("sin modoTematica es del catálogo, igual que antes", () => {
+    const g = new Generacion(gen);
+    assert.equal(g.parametros.modoTematica, "catalogo");
+    assert.equal(g.parametros.tematica, "animales");
+    assert.equal(new Generacion({ ...gen, parametros: { ...gen.parametros, modoTematica: "catalogo" } }).parametros.modoTematica, "catalogo");
+  });
+
+  it("en modo catálogo la temática sigue siendo del enum", () => {
+    for (const malo of ["cine", "sonidos de animales", "", undefined]) {
+      assert.throws(() => new Generacion({ ...gen, parametros: { ...gen.parametros, tematica: malo } }), EntradaInvalida, String(malo));
+    }
+    for (const buena of ["animales", "objetos_cotidianos", "naturaleza", "cuerpo", "escuela"]) {
+      assert.equal(new Generacion({ ...gen, parametros: { ...gen.parametros, tematica: buena } }).parametros.tematica, buena);
+    }
+  });
+
+  it("el modo debe ser uno de los permitidos", () => {
+    for (const malo of ["otro", "LIBRE", "", null, 1]) {
+      assert.throws(() => new Generacion({ ...gen, filtroContenido: filtro, parametros: { ...base, modoTematica: malo, tematica: "animales" } }), EntradaInvalida, String(malo));
+    }
+  });
+
+  it("en modo libre la temática se normaliza y queda como texto", () => {
+    const g = new Generacion(libre("  Sonidos   de ANIMALES "));
+    assert.equal(g.parametros.modoTematica, "libre");
+    assert.equal(g.parametros.tematica, "sonidos de animales");
+  });
+
+  it("en modo libre solo se admiten letras y espacios, de 3 a 40 caracteres", () => {
+    for (const malo of ["ab", "a".repeat(41), "frutas2", "frutas!", "<b>frutas</b>", "", undefined, 7]) {
+      assert.throws(() => new Generacion(libre(malo)), EntradaInvalida, String(malo));
+    }
+  });
+
+  it("en modo libre debe pasar el filtro de contenido, y el error no repite la temática", () => {
+    assert.throws(
+      () => new Generacion(libre("Armas y más armas")),
+      (e) => e instanceof EntradaInvalida && e.codigo === "TEMATICA_NO_PERMITIDA" && !/armas/i.test(e.message)
+    );
+    assert.equal(new Generacion(libre("frutas tropicales")).parametros.tematica, "frutas tropicales");
+  });
+
+  it("sin filtro no se puede crear una temática libre nueva (falla cerrado)", () => {
+    const { filtroContenido, ...sinFiltro } = libre("frutas");
+    assert.throws(() => new Generacion(sinFiltro), (e) => e instanceof EntradaInvalida && e.codigo === "FILTRO_CONTENIDO_REQUERIDO");
+  });
+
+  it("una generación ya guardada (con id) se lee sin filtro y sin volver a filtrarse", () => {
+    const { filtroContenido, ...guardada } = libre("armas antiguas");
+    // Si la lista de términos cambia después, lo ya guardado no puede dejar de leerse
+    const g = new Generacion({ ...guardada, id: "g1" });
+    assert.equal(g.parametros.tematica, "armas antiguas");
+    assert.equal(g.parametros.modoTematica, "libre");
+  });
+
+  it("el filtro no queda guardado en la entidad", () => {
+    const g = new Generacion(libre("frutas"));
+    assert.equal(g.filtroContenido, undefined);
+    assert.ok(!JSON.stringify(g).includes("evaluar"));
+  });
+
+  it("la temática libre no cambia la deducción de la mecánica", () => {
+    assert.equal(new Generacion(libre("frutas")).mecanica, "seleccionar_opcion");
+  });
+});

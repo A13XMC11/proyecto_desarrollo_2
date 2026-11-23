@@ -2,9 +2,9 @@ const EntradaInvalida = require("../../../Compartido/Dominio/Errores/EntradaInva
 const Ejercicio = require("./Ejercicio");
 const ValidacionContenido = require("./ValidacionContenido");
 const {
-  HABILIDADES, MECANICAS, TEMATICAS, CANTIDADES_EJERCICIOS, ESTADOS_VERSION, COMPATIBILIDAD
+  HABILIDADES, MECANICAS, TEMATICAS, MODOS_TEMATICA, CANTIDADES_EJERCICIOS, ESTADOS_VERSION, COMPATIBILIDAD
 } = require("../../../Compartido/Dominio/ValoresPermitidos");
-const { enumerado, entero, identificador, fechaOpcional } = require("../../../Compartido/Dominio/Validaciones");
+const { enumerado, entero, identificador, fechaOpcional, tematicaLibre } = require("../../../Compartido/Dominio/Validaciones");
 
 class VersionJuego {
   constructor({
@@ -15,7 +15,10 @@ class VersionJuego {
     const { habilidad, mecanica, tematica, cantidadEjercicios } = configuracion;
     enumerado(habilidad, HABILIDADES, "habilidad");
     enumerado(mecanica, MECANICAS, "mecanica");
-    enumerado(tematica, TEMATICAS, "tematica");
+    // Una versión guardada antes de existir el modo no lo tiene: se lee como del catálogo, sin migrar nada.
+    // El filtro de contenido se aplicó al crear la generación; aquí solo se valida la forma del texto.
+    const modoTematica = configuracion.modoTematica === undefined ? "catalogo" : enumerado(configuracion.modoTematica, MODOS_TEMATICA, "modoTematica");
+    const tematicaValida = modoTematica === "libre" ? tematicaLibre(tematica, "tematica") : enumerado(tematica, TEMATICAS, "tematica");
     enumerado(cantidadEjercicios, CANTIDADES_EJERCICIOS, "cantidadEjercicios");
     if (COMPATIBILIDAD[habilidad] !== mecanica) {
       throw new EntradaInvalida("La mecánica no es compatible con la habilidad");
@@ -42,7 +45,7 @@ class VersionJuego {
     this.juegoId = identificador(juegoId, "juegoId");
     this.numero = numero === undefined ? undefined : entero(numero, "numero", { min: 1 });
     this.formatoVersion = entero(formatoVersion, "formatoVersion", { min: 1 });
-    this.configuracion = { habilidad, mecanica, tematica, cantidadEjercicios };
+    this.configuracion = { habilidad, mecanica, modoTematica, tematica: tematicaValida, cantidadEjercicios };
     this.ejercicios = lista;
     this.estado = enumerado(estado, ESTADOS_VERSION, "estado");
     this.aprobadoEn = fechaOpcional(aprobadoEn, "aprobadoEn");

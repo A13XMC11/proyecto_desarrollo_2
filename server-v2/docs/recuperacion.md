@@ -34,6 +34,60 @@ Es seguro repetirlo. Sin esto, pedir una generación nueva o guardar un interés
 sus valores permitidos se validan en la aplicación y los ejercicios con `icono` conviven con los anteriores (el campo es opcional).
 **Comprobado:** en las bases de pruebas, `sync({ alter: true })` añadió los valores sin perder filas.
 
+### Temática libre: modo de temática (rama `feature/generacion-libre`, paso 3)
+
+La temática libre cambia `generaciones_ia`: la columna `tematica` deja de ser un `ENUM` (solo admitía las 5 del catálogo) y pasa a texto de
+hasta 40 caracteres, y aparece la columna `modo_tematica` (`catalogo` o `libre`). Una base **nueva** sale completa de los modelos. Una base
+**ya existente** con `SQL_SYNC_ALTER=false` no cambia sola: antes de arrancar la versión nueva sobre ella, **con respaldo previo**, ejecutar
+una vez (en una transacción, así queda todo o nada):
+
+```sql
+BEGIN;
+
+-- 1. Modo de temática: las filas que ya existen quedan como "catalogo", que es lo que eran
+DO $$
+BEGIN
+  CREATE TYPE enum_generaciones_ia_modo_tematica AS ENUM ('catalogo', 'libre');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE generaciones_ia
+  ADD COLUMN IF NOT EXISTS modo_tematica enum_generaciones_ia_modo_tematica NOT NULL DEFAULT 'catalogo';
+
+-- 2. La temática pasa de ENUM a texto de hasta 40 caracteres; los valores actuales se conservan tal cual
+ALTER TABLE generaciones_ia
+  ALTER COLUMN tematica TYPE VARCHAR(40) USING tematica::text;
+
+-- 3. El tipo ENUM anterior ya no lo usa nada (el de los intereses de estudiantes es otro y no se toca)
+DROP TYPE IF EXISTS enum_generaciones_ia_tematica;
+
+COMMIT;
+```
+
+Es seguro repetirlo: la segunda vez no cambia nada. No hay que tocar MongoDB: las versiones guardadas antes **no tienen** el campo
+`configuracion.modoTematica` y se leen como `catalogo` sin migrar ningún documento. `Estudiante.intereses` sigue usando las 5 temáticas del catálogo.
+
+Para deshacerlo (solo si no se guardó ninguna generación libre; si hay alguna, antes hay que borrarla o archivarla):
+
+```sql
+BEGIN;
+CREATE TYPE enum_generaciones_ia_tematica AS ENUM ('animales', 'objetos_cotidianos', 'naturaleza', 'cuerpo', 'escuela');
+ALTER TABLE generaciones_ia ALTER COLUMN tematica TYPE enum_generaciones_ia_tematica USING tematica::enum_generaciones_ia_tematica;
+ALTER TABLE generaciones_ia DROP COLUMN modo_tematica;
+DROP TYPE enum_generaciones_ia_modo_tematica;
+COMMIT;
+```
+
+**Comprobado** (2026-11-22) sobre bases de pruebas creadas con el esquema anterior y con una generación guardada, ejecutando el SQL tal cual
+está arriba:
+
+- Aplicarlo deja `tematica` como `character varying(40)` y `modo_tematica` con valor por defecto `'catalogo'`; la fila existente conserva
+  su temática (`animales`) y queda con modo `catalogo`. Aplicarlo una segunda vez no cambia nada.
+- Con el esquema ya ajustado y `SQL_SYNC_ALTER=false`, la versión nueva lee la generación antigua como del catálogo y guarda una de temática libre.
+- Deshacerlo devuelve el esquema anterior sin perder la fila, y volver a aplicarlo lo deja igual que antes.
+- **Sin el SQL manual**, en desarrollo (`SQL_SYNC_ALTER=true`, por defecto) el arranque ajusta la tabla solo y conserva las filas; únicamente deja
+  sin usar el tipo `enum_generaciones_ia_tematica`, que el `DROP TYPE` de arriba elimina. En producción (`SQL_SYNC_ALTER=false`) el SQL manual es obligatorio.
+
 ## 2. Respaldo y restauración
 
 ### Demostrado (una vez, sobre las bases de pruebas)
