@@ -43,7 +43,7 @@ module.exports = function registerJuegoModule(app) {
 
   const juegoController = new JuegoController({
     crearJuego: new CrearJuego(repo, new CursoRepositorySequelize(), new EstudianteRepositorySequelize()),
-    listarJuegos: new ListarJuegos(repo),
+    listarJuegos: new ListarJuegos(repo, versionRepo),
     obtenerJuegoPorId: new ObtenerJuegoPorId(repo),
     actualizarJuego: new ActualizarJuego(repo),
     archivarJuego: new ArchivarJuego(repo),

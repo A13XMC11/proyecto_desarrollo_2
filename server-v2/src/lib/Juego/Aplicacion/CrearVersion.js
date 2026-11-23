@@ -14,14 +14,15 @@ class CrearVersion {
     this.emojisPermitidos = emojisPermitidos;
   }
 
-  async ejecutar(docenteId, juegoId, { tematica, cantidadEjercicios, ejercicios = [] } = {}) {
+  // modoTematica (opcional, "catalogo" por defecto): así una versión nueva de una actividad libre sigue siendo libre
+  async ejecutar(docenteId, juegoId, { modoTematica, tematica, cantidadEjercicios, ejercicios = [] } = {}) {
     const juego = await this.juegoRepository.findById(juegoId, docenteId);
     if (!juego) throw new NoEncontrado("Juego no encontrado");
 
     VersionJuego.rechazarCamposDesconocidos(ejercicios);
     const version = new VersionJuego({
       juegoId: juego.id,
-      configuracion: { habilidad: juego.habilidad, mecanica: juego.mecanica, tematica, cantidadEjercicios },
+      configuracion: { habilidad: juego.habilidad, mecanica: juego.mecanica, modoTematica, tematica, cantidadEjercicios },
       ejercicios
     });
     version.validarContenido(this.catalogo, {

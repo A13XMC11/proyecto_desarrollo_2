@@ -170,6 +170,38 @@ describe("HTTP: temática libre, de la aprobación a la partida (paso 4, datos f
     assert.equal(r.cuerpo.codigo, "GENERACION_LIBRE_DESHABILITADA");
   });
 
+  prueba("crear una versión nueva de una actividad libre conserva el modo libre y su temática", async () => {
+    const esc = await escenario();
+    const { juego, version, rutaV, ejercicios } = await juegoConBorradorLibre(esc, "vocales", "frutas");
+    assert.equal((await llamar(`${rutaV}/${version}/aprobar`, { metodo: "POST", docente: esc.docente })).status, 200);
+    const nueva = await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { modoTematica: "libre", tematica: "frutas", cantidadEjercicios: 5, ejercicios } });
+    assert.equal(nueva.status, 201, JSON.stringify(nueva.cuerpo));
+    assert.deepEqual([nueva.cuerpo.configuracion.modoTematica, nueva.cuerpo.configuracion.tematica], ["libre", "frutas"]);
+    assert.equal((await llamar(`${rutaV}/${nueva.cuerpo.id}/aprobar`, { metodo: "POST", docente: esc.docente })).status, 200);
+    // Sin decir el modo es una versión del catálogo (como siempre): «frutas» no es una temática del catálogo
+    const sinModo = await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "frutas", cantidadEjercicios: 5, ejercicios: [] } });
+    assert.equal(sinModo.status, 400);
+    assert.equal((await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { modoTematica: "otro", tematica: "frutas", cantidadEjercicios: 5, ejercicios: [] } })).status, 400);
+    // Una palabra bloqueada tampoco entra por esta vía
+    const malos = ejercicios.map((e, i) => (i === 0 ? { ...e, objetivo: "arma" } : e));
+    const bloqueada = await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { modoTematica: "libre", tematica: "frutas", cantidadEjercicios: 5, ejercicios: malos } });
+    assert.equal(bloqueada.status, 400);
+    assert.ok(!/arma/i.test(JSON.stringify(bloqueada.cuerpo)));
+    assert.ok(juego);
+  });
+
+  prueba("la lista de actividades indica cuáles son de temática libre", async () => {
+    const esc = await escenario();
+    const libre = await juegoConBorradorLibre(esc, "vocales", "frutas");
+    const catalogo = (await llamar("/api/juegos", { metodo: "POST", docente: esc.docente, cuerpo: { cursoId: esc.curso, titulo: "De catálogo", habilidad: "vocales" } })).cuerpo.id;
+    await llamar(`/api/juegos/${catalogo}/versiones`, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 5, ejercicios: [] } });
+    const lista = (await llamar("/api/juegos", { docente: esc.docente })).cuerpo.items;
+    const por = new Map(lista.map((j) => [j.id, j]));
+    assert.deepEqual(por.get(libre.juego).configuracion, { modoTematica: "libre", tematica: "frutas" });
+    assert.deepEqual(por.get(catalogo).configuracion, { modoTematica: "catalogo", tematica: "animales" });
+    assert.deepEqual((await llamar("/api/juegos", { docente: esc.ajeno })).cuerpo.items, []);
+  });
+
   prueba("una versión del catálogo se valida y aprueba igual que antes", async () => {
     const esc = await escenario();
     const juego = (await llamar("/api/juegos", { metodo: "POST", docente: esc.docente, cuerpo: { cursoId: esc.curso, titulo: "Catálogo", habilidad: "vocales" } })).cuerpo.id;

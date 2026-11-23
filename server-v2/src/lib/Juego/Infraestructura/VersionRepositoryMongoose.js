@@ -55,6 +55,19 @@ class VersionRepositoryMongoose {
     return docs.map((doc) => this.aEntidad(doc));
   }
 
+  // Una sola consulta para toda una página de la biblioteca. Los ids inválidos se ignoran.
+  async findConfiguraciones(juegoIds) {
+    const mapa = new Map();
+    const ids = [...new Set((Array.isArray(juegoIds) ? juegoIds : []).filter(esObjectId))];
+    if (!ids.length) return mapa;
+    const docs = await VersionJuegoModel.find({ juegoId: { $in: ids }, estado: { $ne: "descartada" } }).sort({ numero: -1 }).select("juegoId configuracion").lean();
+    for (const doc of docs) {
+      const clave = String(doc.juegoId);
+      if (!mapa.has(clave)) mapa.set(clave, { modoTematica: doc.configuracion.modoTematica || "catalogo", tematica: doc.configuracion.tematica });
+    }
+    return mapa;
+  }
+
   async findBorradorByJuego(juegoId) {
     if (!esObjectId(juegoId)) return null;
     const doc = await VersionJuegoModel.findOne({ juegoId, estado: "borrador" }).lean();
