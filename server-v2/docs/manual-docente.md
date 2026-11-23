@@ -26,13 +26,23 @@ Hay dos caminos. En ambos **nada llega a los estudiantes hasta que usted apruebe
 
 ### a) Con IA (Crear con IA)
 1. Elija el curso y, si quiere, un estudiante concreto («Todo el curso» por defecto).
-2. Elija **qué practicar** (Vocales o Palabras con sílabas), la **temática** y **cuántos ejercicios** (5).
+2. Elija **qué practicar** (Vocales, Palabras con sílabas, Completar la sílaba o Contar sílabas), la **temática** y **cuántos ejercicios** (5 o 10).
+   La temática puede ser **«Temática del catálogo»** (palabras ya revisadas de 5 temáticas) u **«Otra temática»** (ver más abajo).
 3. Opcional: añada una indicación breve (hasta 500 caracteres; **sin nombres de estudiantes**).
 4. Pulse **Generar actividad** y espere unos segundos. Verá el resultado en «Tus solicitudes».
 5. Pulse **Revisar** para abrir el borrador.
 
 Cada docente tiene un **cupo diario** de generaciones (se muestra «Cupo de hoy»). Un intento que falla puede consumir cupo. Volver a jugar una actividad guardada **no gasta cupo**.
 Si la generación está desactivada, la pantalla lo avisa y puede **crear la actividad a mano**.
+
+#### Otra temática (temática libre)
+Con **«Otra temática»** usted escribe la temática (de 3 a 40 caracteres, solo letras y espacios; por ejemplo *frutas*, *colores* o *medios de transporte*) y la IA propone las **palabras**. En el catálogo, en cambio, las palabras ya estaban revisadas.
+
+- **Si la opción aparece bloqueada** («No está disponible por ahora»), la institución todavía no la habilitó: use una temática del catálogo.
+- **No escriba nombres de estudiantes ni datos personales** en la temática ni en la indicación: el texto se envía a la IA.
+- **«Sonidos de animales»** genera ejercicios con los **nombres** de los animales (perro, vaca…), **no** con los sonidos que hacen (guau, muu). Practicar los sonidos todavía no es posible.
+- El sistema revisa que las palabras y los textos sean adecuados para niños de 5 a 7 años, calcula él mismo las sílabas y la respuesta correcta y descarta las palabras dudosas (por ejemplo, las que tienen hiato, como *río* o *león*). La IA **no decide qué es correcto**.
+- Esa revisión automática **es una ayuda y no detecta todo**: la garantía real es **su revisión antes de aprobar**.
 
 ### b) A mano (Mis actividades → Crear a mano)
 Escriba el título, elija curso, habilidad y temática, y pulse **Crear y escribir ejercicios**. Cada ejercicio usa una **palabra del catálogo** revisado; el sistema calcula las sílabas y las opciones. Hay cuatro habilidades: **vocales**, **palabras con sílabas** (ordenar), **completar la sílaba** (falta una sílaba de la palabra) y **contar sílabas**. Puede pedir 5 o 10 ejercicios, y la mayoría de las palabras se muestra con un **icono** para quien aún no lee con soltura.
@@ -43,6 +53,27 @@ En la página de la actividad:
 - **Vista previa** muestra cómo lo verá el estudiante; puede responder para probar y no se guarda nada.
 - **Guardar** conserva el borrador. **Descartar** lo elimina. **Aprobar** lo deja listo para el aula (exige todos los ejercicios).
 - El sistema revisa que los ejercicios tengan sentido (que la respuesta correcta esté entre las opciones, que las sílabas formen la palabra, que la pista no regale la respuesta). Si algo falla, lo marca en rojo.
+
+#### Revisar un borrador de «Otra temática»
+Además de lo anterior, el borrador muestra en cada ejercicio la **palabra** (no se puede cambiar), la **respuesta correcta** que calculó el sistema (tampoco se cambia) y el **icono**:
+1. **Lea cada palabra.** Si alguna no le parece adecuada o no sirve para su grupo, **descarte el borrador** y pida otro: las palabras no se editan.
+2. **Compruebe que el icono corresponda a la palabra.** El sistema solo comprueba que el icono sea seguro (está en una lista cerrada), no que sea el dibujo correcto. Puede usar **Elegir otro icono** (se abre una lista por tipo; **Esc** la cierra) o **Quitar el icono**. Algunas palabras no llevan icono, y los colores se enseñan con el nombre escrito, sin depender del color.
+3. **Corrija la consigna y la pista** si hace falta. El sistema no las deja decir la respuesta ni usar palabras no adecuadas para niños.
+4. Revise la **vista previa** y pulse **Guardar** o **Aprobar**. Al aprobar, el foco pasa al enlace **Iniciar en el aula**.
+
+#### Si la solicitud falla
+La pantalla explica el motivo en «Tus solicitudes». Los más probables en «Otra temática»:
+
+| Mensaje | Qué hacer |
+|---|---|
+| «Esa temática no es adecuada para esta actividad…» | Escriba otra (por ejemplo frutas, colores o medios de transporte). **No gasta cupo.** |
+| «Tu instrucción para la IA contiene algo que no es adecuado…» | Reescríbala o bórrela. No gasta cupo. |
+| «No se encontraron suficientes palabras válidas para esa temática…» | Pruebe una temática más común o más amplia. **Este intento sí cuenta** en el cupo del día. |
+| «La IA propuso palabras o textos que no pasaron la revisión automática…» | Pruebe otra temática. **Sí cuenta** en el cupo. |
+| «Ya usaste todas las actividades con IA de hoy» | Espere a mañana o cree la actividad a mano. |
+| «La IA tardó demasiado…» / «No se pudo conectar con la IA…» | Espere unos minutos y vuelva a intentar. |
+
+Si nada funciona, siempre puede **crear la actividad a mano** con el catálogo.
 
 ### Editar algo ya aprobado
 Una versión aprobada **no cambia**. Use **Editar como versión nueva**, corrija y apruebe de nuevo. Las partidas que ya empezaron **conservan la versión con que empezaron**; las nuevas usan la actualizada.
@@ -75,9 +106,15 @@ En **Mis actividades** puede **buscar por título** y filtrar por curso, estudia
 
 Cambie su nombre o institución. El correo no se puede modificar.
 
+## Usar la plataforma solo con el teclado
+
+Se puede preparar y jugar una actividad sin ratón: **Tab** y **Mayús + Tab** recorren los controles, **Enter** o **Espacio** activan, **las flechas** cambian entre opciones de un grupo (por ejemplo, la habilidad o la temática) y **Esc** cierra la lista de iconos. En el panel, el primer **Tab** de cada pantalla llega a «Saltar al contenido». En el aula, el foco pasa solo a la primera respuesta de cada ejercicio, al botón «Siguiente» y al título de «¡Terminaste!».
+Esto se revisó **a mano** (ver `aceptacion.md` §6); **no** se probó con lector de pantalla ni en tableta.
+
 ## Preguntas frecuentes
 
 - **¿Por qué no puedo borrar un estudiante?** Porque su historial de partidas se conserva; se archiva.
-- **La IA propuso algo incorrecto.** Corríjalo antes de aprobar, o descártelo y pida otro (consume cupo).
+- **La IA propuso algo incorrecto.** Corríjalo antes de aprobar, o descártelo y pida otro (consume cupo). En «Otra temática» la palabra no se edita: descarte el borrador.
+- **El icono no corresponde a la palabra.** Use «Elegir otro icono» o «Quitar el icono» antes de aprobar.
 - **No me deja generar.** Puede que haya agotado el cupo del día, que ya tenga una generación en curso o que la función esté desactivada; la pantalla lo explica.
 - **El estudiante cerró la pantalla a mitad.** No se pierde nada: use **Continuar** en el Inicio.
