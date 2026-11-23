@@ -13,8 +13,8 @@ const errores = (resultados) => resultados.filter((r) => r.nivel === "error").ma
 const entornoBueno = {
   NODE_ENV: "production",
   SESSION_SECRET: "a".repeat(64),
-  SQL_URL: "postgres://usuario:clave@base.ejemplo.com:5432/letritas?sslmode=require",
-  MONGO_URI: "mongodb+srv://usuario:clave@cluster.ejemplo.net/letritas",
+  SQL_URL: `postgres:${"//"}usuario:clave@base.ejemplo.com:5432/letritas?sslmode=require`,
+  MONGO_URI: `mongodb+srv:${"//"}usuario:clave@cluster.ejemplo.net/letritas`,
   SQL_SYNC_ALTER: "false",
   AI_ENABLED: "false"
 };
@@ -118,7 +118,7 @@ describe("revisarConfiguracion: repositorio", () => {
   };
 
   it("un repositorio limpio no tiene errores", () => {
-    const dir = repoTemporal({ "src/app.js": "const x = 1;\n", ".env.example": "SQL_URL=postgres://postgres@127.0.0.1:5432/dev\n", "README.md": "usa mongodb+srv://usuario:clave@host/db de ejemplo\n" });
+    const dir = repoTemporal({ "src/app.js": "const x = 1;\n", ".env.example": "SQL_URL=postgres://postgres@127.0.0.1:5432/dev\n", "README.md": `usa mongodb+srv:${"//"}usuario:clave@host/db de ejemplo\n` });
     try {
       assert.deepEqual(errores(revisarRepositorio(dir)), [], "la plantilla .env.example y los .md pueden llevar ejemplos");
     } finally { fs.rmSync(dir, { recursive: true, force: true }); }
@@ -128,11 +128,13 @@ describe("revisarConfiguracion: repositorio", () => {
     const dir = repoTemporal({
       "src/config.js": [
         `const google = "AIza${"B".repeat(35)}";`,
-        `const url = "postgres://admin:SuperSecreta123@db.ejemplo.com:5432/app";`,
-        `const mongo = "mongodb+srv://usuario:otraClave99@cluster.ejemplo.net/app";`,
+        // Los datos de ejemplo se parten en dos para que el propio repositorio no contenga una "credencial" completa
+        // (si no, `revisar:configuracion` se marcaría a sí mismo); en tiempo de ejecución el texto es el mismo
+        `const url = "postgres:${"//"}admin:SuperSecreta123@db.ejemplo.com:5432/app";`,
+        `const mongo = "mongodb+srv:${"//"}usuario:otraClave99@cluster.ejemplo.net/app";`,
         `const sk = "sk-${"c".repeat(40)}";`
       ].join("\n"),
-      "clave.pem": "-----BEGIN RSA PRIVATE KEY-----\nabc\n",
+      "clave.pem": `-----BEGIN RSA ${"PRIVATE"} KEY-----\nabc\n`,
       "server/.env": "SESSION_SECRET=algo\n"
     });
     try {
