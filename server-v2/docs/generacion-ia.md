@@ -337,6 +337,9 @@ El generador falso tiene ahora una rama libre para probar todo el flujo sin prov
   caracteres). Es determinista: misma entrada, misma salida; el orden del archivo fija qué palabras salen primero.
 - **Sin dependencias, no genera.** Como el generador real, la temática libre exige el filtro y la lista de iconos y falla antes de producir nada si faltan (se entregan en el paso 7).
 - **El modo catálogo del falso no cambió**: sus pruebas existentes no se modificaron.
+- **Demora simulada (`GENERADOR_FALSO_DEMORA_MS`).** El falso espera ese número de milisegundos antes de responder (catálogo y libre), para ver el estado «generando» o probar tiempos límite y
+  cancelaciones. Se cancela al instante con la señal de aborto. Vacía o sin definir = sin demora; un valor que no sea un entero de 0 o más impide arrancar. Con `AI_PROVEEDOR=gemini` no tiene efecto.
+  Si es mayor o igual que `AI_TIEMPO_LIMITE_MS`, la generación falla con `GENERADOR_TIEMPO_AGOTADO`. Las pruebas la fijan en 0 para no depender del `.env` local.
 
 **Capacidad: palabras que sirven por temática y habilidad** (cada una alcanza para 10 ejercicios sin duplicados; con 5 sobra margen):
 

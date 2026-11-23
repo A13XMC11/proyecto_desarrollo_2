@@ -35,12 +35,25 @@ const normalizar = (texto) => String(texto).normalize("NFD").replace(/\p{M}/gu, 
 class GeneradorContenidoFalso {
   // filtroContenido (IFiltroContenido) y emojisPermitidos (IEmojisPermitidos): solo los usa la temática libre, que pasa
   // por el mismo selector y la misma validación que la IA. `contenido` permite probar con otro diccionario.
-  constructor({ filtroContenido, emojisPermitidos, contenido = CONTENIDO_LIBRE } = {}) {
-    Object.assign(this, { filtroContenido, emojisPermitidos, contenido });
+  // demoraMs: espera simulada antes de responder (GENERADOR_FALSO_DEMORA_MS), cancelable con la señal de aborto.
+  constructor({ filtroContenido, emojisPermitidos, contenido = CONTENIDO_LIBRE, demoraMs = 0 } = {}) {
+    if (!Number.isInteger(demoraMs) || demoraMs < 0) throw new Error("demoraMs debe ser un entero no negativo");
+    Object.assign(this, { filtroContenido, emojisPermitidos, contenido, demoraMs });
+  }
+
+  // Espera la demora simulada; si se cancela mientras tanto, corta enseguida como lo haría una llamada real
+  esperar(signal) {
+    if (!this.demoraMs) return Promise.resolve();
+    return new Promise((resolver, rechazar) => {
+      const cancelada = () => { clearTimeout(temporizador); rechazar(new ErrorDelGenerador("Generación cancelada", "GENERADOR_TIEMPO_AGOTADO")); };
+      const temporizador = setTimeout(() => { if (signal) signal.removeEventListener("abort", cancelada); resolver(); }, this.demoraMs);
+      if (signal) signal.addEventListener("abort", cancelada, { once: true });
+    });
   }
 
   async generar(solicitud, { signal } = {}) {
     if (signal && signal.aborted) throw new ErrorDelGenerador("Generación cancelada", "GENERADOR_TIEMPO_AGOTADO");
+    await this.esperar(signal);
     if (solicitud.modoTematica === "libre") return this.generarLibre(solicitud);
     const { habilidad, tematica, cantidad, recursos } = solicitud;
     const ejercicios = this.ejerciciosDe(habilidad, recursos, cantidad);

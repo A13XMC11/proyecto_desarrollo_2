@@ -29,9 +29,17 @@ const ObtenerGeneracion = require("../../Aplicacion/ObtenerGeneracion");
 const CancelarGeneracion = require("../../Aplicacion/CancelarGeneracion");
 const ConsultarCuotas = require("../../Aplicacion/ConsultarCuotas");
 
+// GENERADOR_FALSO_DEMORA_MS: espera simulada del generador falso. Vacía o sin definir = sin demora; un valor inválido no deja arrancar.
+function leerDemoraFalsa(env) {
+  const texto = env.GENERADOR_FALSO_DEMORA_MS;
+  if (texto === undefined || texto.trim() === "") return 0;
+  if (!/^\d+$/.test(texto.trim())) throw new Error("GENERADOR_FALSO_DEMORA_MS debe ser un entero de milisegundos, 0 o más");
+  return Number(texto.trim());
+}
+
 function crearGenerador(env = process.env) {
   const proveedor = env.AI_PROVEEDOR || "falso";
-  if (proveedor === "falso") return new GeneradorContenidoFalso();
+  if (proveedor === "falso") return new GeneradorContenidoFalso({ demoraMs: leerDemoraFalsa(env) });
   if (proveedor === "gemini") {
     // Sin valores por defecto: el modelo y el tope de salida salen de la prueba del modelo (S4-06)
     const faltan = ["GEMINI_API_KEY", "GEMINI_MODELO", "AI_MAX_TOKENS_SALIDA"].filter((n) => !env[n] || !env[n].trim());

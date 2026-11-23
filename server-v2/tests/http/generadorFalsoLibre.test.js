@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 
 // Valores de prueba: sin proveedor real y con 10 ejercicios permitidos (como la suite completa)
 Object.assign(process.env, {
-  AI_ENABLED: "true", AI_PROVEEDOR: "falso", AI_MAX_DIARIAS: "3", AI_MAX_SIMULTANEAS: "1",
+  AI_ENABLED: "true", AI_PROVEEDOR: "falso", GENERADOR_FALSO_DEMORA_MS: "0", AI_MAX_DIARIAS: "3", AI_MAX_SIMULTANEAS: "1",
   AI_TIEMPO_LIMITE_MS: "5000", AI_MARGEN_CONCILIACION_MS: "1000", AI_PRESUPUESTO_MENSUAL: "1000000",
   AI_COSTO_MAXIMO_LLAMADA: "1", AI_TARIFA_ENTRADA_MTOK: "1", AI_TARIFA_SALIDA_MTOK: "2", PERMITIR_10_EJERCICIOS: "true"
 });

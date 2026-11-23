@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 // La generación se habilita ANTES de que buildApp lea el entorno (lo hace al registrar el módulo).
 // Valores de prueba: con el generador falso no hay proveedor, tokens ni costo real.
 Object.assign(process.env, {
-  AI_ENABLED: "true", AI_PROVEEDOR: "falso", AI_MAX_DIARIAS: "3", AI_MAX_SIMULTANEAS: "1",
+  AI_ENABLED: "true", AI_PROVEEDOR: "falso", GENERADOR_FALSO_DEMORA_MS: "0", AI_MAX_DIARIAS: "3", AI_MAX_SIMULTANEAS: "1",
   AI_TIEMPO_LIMITE_MS: "5000", AI_MARGEN_CONCILIACION_MS: "1000", AI_PRESUPUESTO_MENSUAL: "1000000",
   AI_COSTO_MAXIMO_LLAMADA: "1", AI_TARIFA_ENTRADA_MTOK: "1", AI_TARIFA_SALIDA_MTOK: "2"
 });
