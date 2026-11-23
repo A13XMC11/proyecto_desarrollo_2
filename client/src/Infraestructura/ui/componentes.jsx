@@ -52,7 +52,7 @@ export const BotonEnlace = ({ variante = "primario", tamano = "md", children, cl
 const clasesEntrada = (error) =>
   `w-full min-h-11 rounded-xl border bg-white px-3.5 text-base text-tinta placeholder:text-slate-400
    transition-[border-color] duration-150 focus:outline-none focus:ring-4
-   ${error ? "border-error focus:ring-error/15" : "border-borde focus:border-marca-500 focus:ring-marca-500/15"}`;
+   ${error ? "border-error focus:ring-error/30" : "border-borde focus:border-marca-600 focus:ring-marca-600/30"}`;
 
 const Etiqueta = ({ id, texto, requerido }) => (
   <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-tinta">

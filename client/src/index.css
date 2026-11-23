@@ -81,6 +81,12 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-marca-600;
   }
+  /* Las tarjetas de opción (habilidad, modo de temática, avatar…) usan un radio oculto: el foco del teclado se pinta
+     en la tarjeta entera, porque en el radio de 1 px recortado no se vería */
+  label:has(> input.sr-only:focus-visible),
+  label:has(input.sr-only:focus-visible) {
+    @apply outline-2 outline-offset-2 outline-marca-600 rounded-2xl;
+  }
 }
 
 /* Revelado al hacer scroll (solo portada, una vez). Sin JS el contenido se ve igual. */

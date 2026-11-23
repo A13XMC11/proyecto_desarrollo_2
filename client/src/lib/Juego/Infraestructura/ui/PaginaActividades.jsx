@@ -103,7 +103,7 @@ export const PaginaActividades = () => {
           <label htmlFor="buscar" className="mb-1.5 block text-sm font-medium">Buscar</label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-            <input id="buscar" type="search" value={texto} onChange={(e) => setTexto(e.target.value)} onBlur={() => cambiar("texto", texto.trim())} placeholder="Título de la actividad" className="min-h-11 w-full rounded-xl border border-borde pl-10 pr-3 text-base focus:border-marca-500 focus:outline-none focus:ring-4 focus:ring-marca-500/15" />
+            <input id="buscar" type="search" value={texto} onChange={(e) => setTexto(e.target.value)} onBlur={() => cambiar("texto", texto.trim())} placeholder="Título de la actividad" className="min-h-11 w-full rounded-xl border border-borde pl-10 pr-3 text-base focus:border-marca-600 focus:outline-none focus:ring-4 focus:ring-marca-600/30" />
           </div>
         </div>
         <Selector etiqueta="Curso" value={cursoId} onChange={(e) => cambiar("cursoId", e.target.value)} opciones={[{ valor: "", texto: "Todos" }, ...(cursos.datos || []).map((c) => ({ valor: c.id, texto: nombreCurso(c) }))]} />
