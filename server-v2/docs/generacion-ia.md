@@ -395,6 +395,16 @@ una idempotencia sin modo y un interruptor ignorado.
 **Ampliación del alcance.** La temática libre amplía el SRS: la restricción del catálogo local revisado (§2.5 y §5.4) y el RNF-011, que fijaban el contenido a una lista cerrada. Ahora el contenido lo propone la IA a partir de una temática del docente y lo
 protegen otros controles (silabeador propio, filtro de contenido, lista cerrada de iconos y aprobación del docente). Esta ampliación **debe validarse con el docente de la asignatura** antes de habilitarla en un entorno real.
 
+### Temática libre: cliente, instrucción filtrada y revisión (rama `feature/generacion-libre`, pasos 8 y 9)
+
+- **Para el cliente.** `GET /api/cuotas` agrega `generacionLibreHabilitada` (verdadero solo con la IA y `GENERACION_LIBRE_HABILITADA` encendidas) para mostrar u ocultar «Otra temática». `GET /api/iconos` entrega la lista cerrada de iconos por categoría, con sesión
+  y solo lectura: el cliente no la copia y el servidor sigue validando cada icono al guardar. La biblioteca distingue las actividades libres y «Editar como versión nueva» conserva el modo.
+- **La instrucción del docente también pasa por el filtro** (paso 9). Una solicitud nueva con una instrucción bloqueada responde 400 `INSTRUCCION_NO_PERMITIDA` **antes de reservar cupo**, sin llamar al generador y sin repetir el texto. «Practicar la A y la E» y frases cortas inocentes pasan.
+- **Pruebas con cliente hostil** (`tests/http/clienteHostil.test.js`, 26 pruebas por la API directa): no se encontró ningún hueco; 5 mutaciones confirmaron que las pruebas detectan la rotura de la regla.
+- **`npm run revisar:configuracion`** avisa si `GENERACION_LIBRE_HABILITADA=true` con la IA encendida (revisar SRS, filtro parcial y costo), si está encendida con la IA apagada (no tendrá efecto) o si el valor no se reconoce. No bloquea la publicación.
+- **Datos que debe revisar una persona** antes de usar la temática libre con niños: `terminosBloqueados.json`, `emojisPermitidos.json` y `contenidoFalsoLibre.json` (C10).
+- **Para probar el flujo sin costo** (generador falso, seis variables obligatorias y tramo de la demostración): `guion-demostracion.md`.
+
 ## 4. Ejemplos
 
 ### Respuestas válidas
