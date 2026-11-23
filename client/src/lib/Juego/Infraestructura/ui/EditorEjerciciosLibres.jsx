@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ImageOff, Palette, Sparkles } from "lucide-react";
 import { Boton, Campo, Selector } from "../../../../Infraestructura/ui/componentes";
 import { CATEGORIAS_ICONOS } from "../../Dominio/ValoresPermitidos";
@@ -9,12 +9,18 @@ import { iconosDe } from "../../Dominio/EjerciciosLibres";
 const SelectorIcono = ({ valor, categorias, alElegir, idEjercicio }) => {
   const [abierto, setAbierto] = useState(false);
   const [categoria, setCategoria] = useState("");
+  const gatilloRef = useRef(null);
   const clave = categoria || categorias?.[0]?.clave || "";
   const iconos = iconosDe(categorias, clave);
+  // Al cerrar el panel el foco vuelve al botón que lo abrió: si no, el botón enfocado desaparece y el teclado salta al inicio de la página
+  const cerrar = () => { setAbierto(false); gatilloRef.current?.focus(); };
+  const alTeclear = (e) => {
+    if (e.key === "Escape" && abierto) { e.stopPropagation(); cerrar(); }
+  };
   return (
-    <div>
+    <div onKeyDown={alTeclear}>
       <div className="flex flex-wrap gap-2">
-        <Boton variante="secundario" tamano="sm" aria-expanded={abierto} aria-controls={`iconos-${idEjercicio}`} onClick={() => setAbierto((a) => !a)}>
+        <Boton ref={gatilloRef} variante="secundario" tamano="sm" aria-expanded={abierto} aria-controls={`iconos-${idEjercicio}`} onClick={() => setAbierto((a) => !a)}>
           <Palette className="size-4" aria-hidden="true" /> {abierto ? "Cerrar la lista de iconos" : valor ? "Elegir otro icono" : "Elegir un icono"}
         </Boton>
         {valor && (
@@ -40,7 +46,7 @@ const SelectorIcono = ({ valor, categorias, alElegir, idEjercicio }) => {
                       type="button"
                       aria-label={`Icono ${icono}`}
                       aria-pressed={icono === valor}
-                      onClick={() => { alElegir(icono); setAbierto(false); }}
+                      onClick={() => { alElegir(icono); cerrar(); }}
                       className={`grid size-12 cursor-pointer place-items-center rounded-xl text-3xl transition-[scale,background-color] duration-150 active:scale-95 ${icono === valor ? "bg-marca-100 ring-2 ring-marca-600" : "bg-white ring-1 ring-borde hover:bg-marca-50"}`}
                     >
                       <span aria-hidden="true">{icono}</span>

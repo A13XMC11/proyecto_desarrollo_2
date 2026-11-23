@@ -101,6 +101,8 @@ export const PaginaActividad = () => {
   const [ocupado, setOcupado] = useState(null);
   const [confirmar, setConfirmar] = useState(null);
   const [previa, setPrevia] = useState(null); // ejercicios (contrato) que se están previsualizando
+  // Tras aprobar, el botón «Aprobar» desaparece y el foco caería al inicio de la página: se lleva a «Iniciar en el aula»
+  const [enfocarInicio, setEnfocarInicio] = useState(false);
 
   const { juego, versiones = [] } = consulta.datos || {};
   const borrador = versiones.find((v) => v.estado === "borrador");
@@ -119,6 +121,12 @@ export const PaginaActividad = () => {
     setErrores([]);
     setPrevia(null);
   }, [borrador?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!enfocarInicio || juego?.estado !== "listo") return;
+    document.getElementById("iniciar-en-el-aula")?.focus();
+    setEnfocarInicio(false);
+  }, [enfocarInicio, juego?.estado]);
 
   const conAccion = (nombre, funcion) => async () => {
     setOcupado(nombre);
@@ -196,6 +204,7 @@ export const PaginaActividad = () => {
     await JuegoApiHttp.actualizarVersion(id, borrador.id, contrato());
     await JuegoApiHttp.aprobarVersion(id, borrador.id);
     avisar("Actividad aprobada. Ya se puede jugar en el aula.");
+    setEnfocarInicio(true);
     consulta.recargar();
   });
 
@@ -258,7 +267,7 @@ export const PaginaActividad = () => {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          {juego.estado === "listo" && <BotonEnlace to={`/aula/${id}`}><Play className="size-5" aria-hidden="true" /> Iniciar en el aula</BotonEnlace>}
+          {juego.estado === "listo" && <BotonEnlace id="iniciar-en-el-aula" to={`/aula/${id}`}><Play className="size-5" aria-hidden="true" /> Iniciar en el aula</BotonEnlace>}
           <BotonEnlace to={`/panel/resultados?juego=${id}`} variante="secundario"><BarChart3 className="size-5" aria-hidden="true" /> Resultados</BotonEnlace>
           <Boton variante="fantasma" onClick={() => setConfirmar("archivar")}>
             {archivado ? <ArchiveRestore className="size-5" aria-hidden="true" /> : <Archive className="size-5" aria-hidden="true" />}
