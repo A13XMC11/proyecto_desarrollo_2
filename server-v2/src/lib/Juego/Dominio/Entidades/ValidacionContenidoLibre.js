@@ -74,6 +74,18 @@ function silabasDe(palabra, habilidad, donde) {
   return resultado.silabas;
 }
 
+// Todo lo que se exige a UNA palabra para una habilidad, en un solo lugar: lo usan los validadores de abajo y también
+// quien genera candidatas (para descartar las malas con el mismo criterio con que luego se validará el ejercicio).
+// Devuelve { palabra } o, si la habilidad usa sílabas, { palabra, silabas }. `donde` encabeza los mensajes.
+function evaluarPalabra(valor, habilidad, filtro, donde = "palabra") {
+  const palabra = palabraValida(valor, donde, filtro);
+  if (habilidad === "vocales") {
+    if (!ES_VOCAL.test(clave(palabra)[0])) throw error(`${donde}: la palabra debe empezar con vocal`, "PALABRA_NO_EMPIEZA_CON_VOCAL");
+    return { palabra };
+  }
+  return { palabra, silabas: silabasDe(palabra, habilidad, donde) };
+}
+
 function comprobarDivision(palabra, propuesta, silabas, donde) {
   if (!coincideConPropuesta(palabra, propuesta)) {
     throw error(`${donde}: la división en sílabas no es la correcta; «${palabra}» se divide ${silabas.join("-")}`, "DIVISION_NO_COINCIDE");
@@ -98,10 +110,9 @@ function comprobarPalabraDeclarada(ejercicio, palabra, donde) {
 // --- Un validador por habilidad: devuelve la palabra y lo que no puede decir la consigna ni la pista ---------
 
 function validarVocales(ejercicio, donde, { filtro }) {
-  const palabra = palabraValida(ejercicio.objetivo, donde, filtro);
+  const { palabra } = evaluarPalabra(ejercicio.objetivo, "vocales", filtro, donde);
   comprobarPalabraDeclarada(ejercicio, palabra, donde);
   const inicial = clave(palabra)[0];
-  if (!ES_VOCAL.test(inicial)) throw error(`${donde}: la palabra debe empezar con vocal`, "PALABRA_NO_EMPIEZA_CON_VOCAL");
   comprobarOpciones(ejercicio, donde, (t) => ES_VOCAL.test(t), "una vocal cada una");
   if (textoMarcado(ejercicio) !== inicial) {
     throw error(`${donde}: la respuesta correcta no es la vocal con la que empieza la palabra (${inicial.toUpperCase()})`, "RESPUESTA_INCORRECTA");
@@ -110,9 +121,9 @@ function validarVocales(ejercicio, donde, { filtro }) {
 }
 
 function validarContarSilabas(ejercicio, donde, { filtro }) {
-  const palabra = palabraValida(ejercicio.objetivo, donde, filtro);
+  const { palabra, silabas } = evaluarPalabra(ejercicio.objetivo, "contar_silabas", filtro, donde);
   comprobarPalabraDeclarada(ejercicio, palabra, donde);
-  const cantidad = silabasDe(palabra, "contar_silabas", donde).length;
+  const cantidad = silabas.length;
   comprobarOpciones(ejercicio, donde, (t) => ES_NUMERO.test(t), "un número del 1 al 9");
   if (textoMarcado(ejercicio) !== String(cantidad)) {
     throw error(`${donde}: la respuesta correcta no es el número de sílabas de «${palabra}» (${cantidad})`, "RESPUESTA_INCORRECTA");
@@ -122,8 +133,7 @@ function validarContarSilabas(ejercicio, donde, { filtro }) {
 
 function validarCompletarSilaba(ejercicio, donde, { filtro }) {
   if (ejercicio.palabraId === undefined) throw error(`${donde}: falta la palabra completa (palabraId)`, "ESTRUCTURA_INVALIDA");
-  const palabra = palabraValida(ejercicio.palabraId, donde, filtro);
-  const silabas = silabasDe(palabra, "completar_silaba", donde);
+  const { palabra, silabas } = evaluarPalabra(ejercicio.palabraId, "completar_silaba", filtro, donde);
 
   const partes = String(ejercicio.objetivo || "").trim().split(/\s+/).filter(Boolean);
   if (partes.filter((p) => p === MARCA_HUECO).length !== 1) {
@@ -147,11 +157,10 @@ function validarOrdenarSilabas(ejercicio, donde, { filtro }) {
   if (!piezas.every((texto) => ES_SOLO_LETRAS.test(clave(texto)))) {
     throw error(`${donde}: las piezas deben estar escritas solo con letras, sin números, símbolos ni colores`, "PALABRA_INVALIDA");
   }
-  const palabra = palabraValida(ejercicio.palabraId, donde, filtro);
+  const { palabra, silabas } = evaluarPalabra(ejercicio.palabraId, "palabras_silabas", filtro, donde);
   if (ejercicio.objetivo !== undefined && clave(ejercicio.objetivo) !== clave(palabra)) {
     throw error(`${donde}: el objetivo, si se indica, debe ser la palabra del ejercicio`, "ESTRUCTURA_INVALIDA");
   }
-  const silabas = silabasDe(palabra, "palabras_silabas", donde);
   comprobarDivision(palabra, piezas, silabas, donde);
   return { palabra, reveladores: [palabra] };
 }
@@ -172,11 +181,15 @@ function comprobarEstructura(ejercicio, donde) {
   }
 }
 
-// Ni la consigna ni la pista pueden ser solo símbolos o colores: tienen que estar escritas con palabras
-function comprobarTextos(ejercicio, donde, { reveladores, cantidad }) {
+// Ni la consigna ni la pista pueden ser solo símbolos o colores (tienen que estar escritas con palabras), ni contener
+// nada que bloquee el filtro (las redacta quien genera con libertad), ni la respuesta. El mensaje no repite el término.
+function comprobarTextos(ejercicio, donde, { reveladores, cantidad }, filtro) {
   for (const [campo, texto] of [["consigna", ejercicio.consigna], ["pista", ejercicio.pista]]) {
     if (texto === undefined) continue;
     if (!/\p{L}{2,}/u.test(texto)) throw error(`${donde}: la ${campo} debe estar escrita con palabras`, "CONSIGNA_INVALIDA");
+    if (!filtro.evaluar(texto).permitido) {
+      throw error(`${donde}: la ${campo} no está permitida en actividades para niños. Reescríbela`, "TEXTO_NO_PERMITIDO");
+    }
     if (reveladores.some((r) => contiene(texto, r)) || (cantidad && revelaConteo(texto, cantidad))) {
       throw error(`${donde}: la ${campo} contiene la respuesta`, "RESPUESTA_REVELADA");
     }
@@ -216,10 +229,10 @@ function validarContenidoLibre(version, { permitirDiez = false, exigirCantidad =
     if (vistas.has(unica)) throw error(`${donde}: la palabra ya se usa en otro ejercicio de la actividad`, "PALABRA_REPETIDA");
     vistas.add(unica);
 
-    comprobarTextos(ejercicio, donde, resultado);
+    comprobarTextos(ejercicio, donde, resultado, filtroContenido);
     comprobarIcono(ejercicio, donde, emojisPermitidos);
   }
   return version;
 }
 
-module.exports = { validarContenidoLibre };
+module.exports = { validarContenidoLibre, evaluarPalabra, clavePalabra: clave };

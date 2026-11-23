@@ -1,10 +1,14 @@
 const ErrorDelGenerador = require("../../Compartido/Dominio/Errores/ErrorDelGenerador");
 const { construirPromptGeneracion } = require("./construirPromptGeneracion");
 const { completarSilaba, contarSilabas, conIcono } = require("./ejerciciosDeSilabas");
+const { seleccionarEjerciciosLibres } = require("./armarEjerciciosLibres");
 
 const URL_BASE = "https://generativelanguage.googleapis.com";
 const PROVEEDOR = "gemini";
 const tokens = (n) => (Number.isInteger(n) && n >= 0 ? n : undefined);
+
+// En temática libre el título lo arma el servidor (no la IA): así no hace falta filtrarlo ni cabe una inyección en él
+const TITULOS_LIBRES = { vocales: "Vocales", palabras_silabas: "Sílabas", completar_silaba: "La sílaba que falta", contar_silabas: "Cuenta las sílabas" };
 
 // Generador real: una sola llamada a Gemini (sin reintentos, el plan los fija en cero) que devuelve SOLO datos.
 // La IA elige recursos del catálogo y redacta consignas y pistas; el servidor arma ids, opciones, piezas y la
@@ -12,23 +16,30 @@ const tokens = (n) => (Number.isInteger(n) && n >= 0 ? n : undefined);
 // Los mensajes de error nunca incluyen la clave ni el cuerpo de la respuesta del proveedor.
 class GeneradorContenidoIA {
   // presupuestoRazonamiento (opcional): tope de tokens de razonamiento. Si no se define, no se envía y el modelo usa el suyo.
-  constructor({ apiKey, modelo, maxTokensSalida, presupuestoRazonamiento, urlBase = URL_BASE, fetchFn = globalThis.fetch }) {
+  // filtroContenido (IFiltroContenido) y emojisPermitidos (IEmojisPermitidos): solo los usa la temática libre.
+  constructor({ apiKey, modelo, maxTokensSalida, presupuestoRazonamiento, filtroContenido, emojisPermitidos, urlBase = URL_BASE, fetchFn = globalThis.fetch }) {
     if (!apiKey || !modelo) throw new Error("GeneradorContenidoIA requiere apiKey y modelo");
     if (!Number.isInteger(maxTokensSalida) || maxTokensSalida < 1) throw new Error("GeneradorContenidoIA requiere maxTokensSalida entero positivo");
     if (typeof fetchFn !== "function") throw new Error("GeneradorContenidoIA requiere fetch");
     if (presupuestoRazonamiento !== undefined && (!Number.isInteger(presupuestoRazonamiento) || presupuestoRazonamiento < 0)) {
       throw new Error("presupuestoRazonamiento debe ser un entero no negativo");
     }
-    Object.assign(this, { apiKey, modelo, maxTokensSalida, presupuestoRazonamiento, urlBase, fetchFn });
+    Object.assign(this, { apiKey, modelo, maxTokensSalida, presupuestoRazonamiento, filtroContenido, emojisPermitidos, urlBase, fetchFn });
   }
 
   async generar(solicitud, { signal } = {}) {
+    const libre = solicitud.modoTematica === "libre";
+    // Sin estas dependencias no se podría validar lo que proponga la IA: se detiene ANTES de llamar (y de gastar)
+    if (libre && (!this.filtroContenido || !this.emojisPermitidos)) {
+      throw new Error("GeneradorContenidoIA requiere filtroContenido y emojisPermitidos para la temática libre");
+    }
     const { sistema, usuario, esquema } = construirPromptGeneracion(solicitud);
     const respuesta = await this.llamar({ sistema, usuario, esquema }, signal);
     const uso = this.leerUso(respuesta);
     let contenido;
     try {
-      contenido = this.leerContenido(respuesta);
+      contenido = libre ? this.leerContenido(respuesta, { lista: "candidatas", soloCampos: ["candidatas"] }) : this.leerContenido(respuesta);
+      if (libre) return { titulo: this.tituloLibre(solicitud), ejercicios: this.seleccionarLibres(solicitud, contenido.candidatas), uso };
     } catch (error) {
       // La llamada ya se hizo: si el proveedor informó el consumo, se conserva para no reservar de más
       if (error instanceof ErrorDelGenerador && uso.tokensEntrada !== undefined) error.uso = uso;
@@ -69,8 +80,21 @@ class GeneradorContenidoIA {
     }
   }
 
-  // Extrae el JSON del primer candidato; un bloqueo o una respuesta cortada no sirven
-  leerContenido(respuesta) {
+  tituloLibre({ habilidad, tematica }) {
+    return `${TITULOS_LIBRES[habilidad]}: ${tematica}`;
+  }
+
+  // Candidatas de la IA -> ejercicios, con todo lo demás calculado por el servidor
+  seleccionarLibres({ habilidad, mecanica, tematica, cantidad }, candidatas) {
+    return seleccionarEjerciciosLibres({
+      habilidad, mecanica, tematica, cantidad, candidatas, filtroContenido: this.filtroContenido, emojisPermitidos: this.emojisPermitidos
+    });
+  }
+
+  // Extrae el JSON del primer candidato; un bloqueo o una respuesta cortada no sirven.
+  // `lista` es la propiedad que debe ser una lista; con `soloCampos` cualquier otra propiedad invalida la respuesta
+  // (en el catálogo los campos extra se descartan; en la temática libre se rechaza la respuesta entera).
+  leerContenido(respuesta, { lista = "ejercicios", soloCampos } = {}) {
     if (respuesta?.promptFeedback?.blockReason) {
       throw new ErrorDelGenerador("El proveedor de IA bloqueó la solicitud", "GENERADOR_BLOQUEADO");
     }
@@ -86,8 +110,11 @@ class GeneradorContenidoIA {
     } catch (error) {
       throw new ErrorDelGenerador("El proveedor de IA no devolvió un JSON válido", "GENERADOR_RESPUESTA_INVALIDA");
     }
-    if (!contenido || typeof contenido !== "object" || Array.isArray(contenido) || !Array.isArray(contenido.ejercicios)) {
+    if (!contenido || typeof contenido !== "object" || Array.isArray(contenido) || !Array.isArray(contenido[lista])) {
       throw new ErrorDelGenerador("El JSON del proveedor de IA no tiene la forma esperada", "GENERADOR_RESPUESTA_INVALIDA");
+    }
+    if (soloCampos && Object.keys(contenido).some((campo) => !soloCampos.includes(campo))) {
+      throw new ErrorDelGenerador("El JSON del proveedor de IA trae campos fuera del esquema", "GENERADOR_RESPUESTA_INVALIDA");
     }
     return contenido;
   }

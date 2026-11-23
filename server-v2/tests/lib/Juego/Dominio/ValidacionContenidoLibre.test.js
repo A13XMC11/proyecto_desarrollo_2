@@ -4,6 +4,7 @@ const VersionJuego = require("../../../../src/lib/Juego/Dominio/Entidades/Versio
 const EntradaInvalida = require("../../../../src/lib/Compartido/Dominio/Errores/EntradaInvalida");
 const FiltroContenidoJson = require("../../../../src/lib/Juego/Infraestructura/FiltroContenidoJson");
 const EmojisPermitidosJson = require("../../../../src/lib/Juego/Infraestructura/EmojisPermitidosJson");
+const { evaluarPalabra } = require("../../../../src/lib/Juego/Dominio/Entidades/ValidacionContenidoLibre");
 
 // Datos fabricados a mano: no interviene la IA ni el catálogo. Las divisiones en sílabas se escriben aquí a mano
 // (según la ortografía del español) y NO se calculan con el código que se prueba.
@@ -142,6 +143,37 @@ describe("ValidacionContenidoLibre: reglas comunes", () => {
     rechaza(cambiando("vocales", 0, { consigna: "🔴🟢🔵" }), "CONSIGNA_INVALIDA");
     rechaza(cambiando("vocales", 0, { consigna: "?" }), "CONSIGNA_INVALIDA");
     rechaza(cambiando("vocales", 0, { pista: "🔴" }), "CONSIGNA_INVALIDA");
+  });
+
+  it("la consigna y la pista también pasan por el filtro de contenido, y el mensaje no repite el término", () => {
+    const casos = [
+      [cambiando("vocales", 0, { consigna: "¿Es esta palabra un arma de verdad?" }), "consigna", /arma/i],
+      [cambiando("vocales", 0, { pista: "Piensa en tu cerveza favorita" }), "pista", /cerveza/i],
+      [cambiando("contar_silabas", 1, { consigna: "Cuenta las sílabas de esta pistola" }), "consigna", /pistola/i],
+      [cambiando("palabras_silabas", 2, { pista: "Una m.i.e.r.d.a de pista" }), "pista", /mierda|m\.i\.e/i],
+      [cambiando("completar_silaba", 3, { consigna: "¿Qué sílaba falta? p u t a" }), "consigna", /puta|p u t a/i]
+    ];
+    for (const [v, campo, termino] of casos) {
+      assert.throws(() => validar(v), (e) => {
+        assert.equal(e.codigo, "TEXTO_NO_PERMITIDO");
+        assert.equal(e.statusCode, 400);
+        assert.match(e.message, new RegExp(campo));
+        assert.match(e.message, /ejercicio e\d/);
+        assert.ok(!termino.test(e.message), `el mensaje repite el término: ${e.message}`);
+        return true;
+      });
+    }
+  });
+
+  it("las consignas y pistas habituales de todas las habilidades pasan el filtro", () => {
+    for (const habilidad of HABILIDADES) {
+      for (const tema of Object.keys(TEMAS)) assert.doesNotThrow(() => validar(version(habilidad, actividad(habilidad, tema), { tematica: tema })));
+    }
+    for (const texto of ["¿Con qué vocal empieza esta palabra?", "Escucha el primer sonido", "Aplaude una vez por cada sílaba",
+      "Lee en voz alta las sílabas que ya están", "Ordena las sílabas para formar la palabra", "¿Cuántas sílabas tiene la palabra?",
+      "Mira bien el dibujo", "Piensa en el sonido del principio", "¿Qué fruta es esta?", "Tócala con el dedo"]) {
+      assert.doesNotThrow(() => validar(cambiando("vocales", 0, { consigna: texto })), texto);
+    }
   });
 
   it("el icono, si viene, debe estar en la lista cerrada; los colores sueltos y lo inseguro no", () => {
@@ -301,5 +333,43 @@ describe("ValidacionContenidoLibre: ordenar sílabas", () => {
 
   it("las piezas son solo letras: un símbolo o un color no cuenta como pieza", () => {
     rechaza(cambiando("palabras_silabas", 0, (e) => ({ ...e, piezas: [{ id: "p1", texto: "pe" }, { id: "p2", texto: "🔴" }] })), "PALABRA_INVALIDA");
+  });
+});
+
+describe("evaluarPalabra: la validación de una palabra, reutilizable por quien genera candidatas", () => {
+  const filtro = deps.filtroContenido;
+  const fallo = (valor, habilidad) => {
+    try { evaluarPalabra(valor, habilidad, filtro); } catch (e) {
+      if (!(e instanceof EntradaInvalida)) throw e; // un error de programación no es un rechazo
+      return e;
+    }
+    return assert.fail(`${JSON.stringify(valor)} debería rechazarse para ${habilidad}`);
+  };
+
+  it("devuelve la palabra normalizada y, si la habilidad usa sílabas, su división calculada por el servidor", () => {
+    assert.deepEqual(evaluarPalabra("  Abeja ", "vocales", filtro), { palabra: "abeja" });
+    assert.deepEqual(evaluarPalabra("Manzana", "contar_silabas", filtro), { palabra: "manzana", silabas: ["man", "za", "na"] });
+    assert.deepEqual(evaluarPalabra("perro", "palabras_silabas", filtro), { palabra: "perro", silabas: ["pe", "rro"] });
+    assert.deepEqual(evaluarPalabra("mariposa", "completar_silaba", filtro), { palabra: "mariposa", silabas: ["ma", "ri", "po", "sa"] });
+  });
+
+  it("rechaza con el mismo código que la validación completa", () => {
+    assert.equal(fallo("abeja2", "vocales").codigo, "PALABRA_INVALIDA");
+    assert.equal(fallo(undefined, "contar_silabas").codigo, "PALABRA_INVALIDA");
+    assert.equal(fallo("arma", "vocales").codigo, "PALABRA_NO_PERMITIDA");
+    assert.equal(fallo("gato", "vocales").codigo, "PALABRA_NO_EMPIEZA_CON_VOCAL");
+    assert.equal(fallo("león", "contar_silabas").codigo, "SILABEO_DUDOSO");
+    assert.equal(fallo("atlas", "palabras_silabas").codigo, "SILABEO_DUDOSO");
+    assert.equal(fallo("mariposa", "palabras_silabas").codigo, "SILABAS_FUERA_DE_RANGO");
+    assert.equal(fallo("sol", "completar_silaba").codigo, "SILABAS_FUERA_DE_RANGO");
+  });
+
+  it("el mensaje de una palabra bloqueada no la repite", () => {
+    assert.ok(!/pistola/i.test(fallo("pistola", "contar_silabas").message));
+  });
+
+  it("vocales no necesita dividir: un hiato no la invalida; las demás habilidades sí lo rechazan", () => {
+    assert.deepEqual(evaluarPalabra("aéreo", "vocales", filtro), { palabra: "aéreo" });
+    assert.equal(fallo("aéreo", "contar_silabas").codigo, "SILABEO_DUDOSO");
   });
 });
