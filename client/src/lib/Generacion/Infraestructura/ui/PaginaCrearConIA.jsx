@@ -1,19 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { GraduationCap, Info, Sparkles, X } from "lucide-react";
-import { AreaTexto, Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector, Tarjeta } from "../../../../Infraestructura/ui/componentes";
+import { GraduationCap, Info, ShieldAlert, Sparkles, X } from "lucide-react";
+import { AreaTexto, Boton, BotonEnlace, Campo, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector, Tarjeta } from "../../../../Infraestructura/ui/componentes";
 import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { nuevoIdOperacion } from "../../../../Infraestructura/http/clienteHttp";
 import { useConsulta } from "../../../../Infraestructura/http/useConsulta";
 import { useCursos, useEstudiantes } from "../../../Aula/Aplicacion/useAula";
-import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, MOTIVOS_GENERACION, TEMATICAS, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
+import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, MODOS_TEMATICA, MOTIVOS_GENERACION, TEMATICAS, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
+import { nombreTematica } from "../../../Juego/Dominio/Tematica";
+import { EJEMPLOS_TEMATICA, MAX_TEMATICA, ayudaTematica, normalizarTematica, revisarTematica } from "../../Dominio/TematicaLibre";
+import { mensajeDeError } from "../../Dominio/Mensajes";
 import { GeneracionApiHttp } from "../GeneracionApiHttp";
 
 const MAX_INSTRUCCION = 500;
 // Mientras haya una solicitud en cola o generándose, la lista se consulta sola cada pocos segundos
 const INTERVALO_SEGUIMIENTO_MS = 3000;
+// Mientras se espera la respuesta de una solicitud propia se consulta más seguido, para que se vea «Generando»
+const INTERVALO_ENVIANDO_MS = 700;
 
 const esActiva = (g) => g.estado === "pendiente" || g.estado === "procesando";
+const AVISO_DATOS = "No escribas nombres de estudiantes ni datos personales; el texto se envía a la IA.";
 const motivoDe = (g) => (g.estado === "fallida" ? MOTIVOS_GENERACION[g.errorCodigo] : g.estado === "interrumpida" ? MOTIVOS_GENERACION.interrumpida : null);
 
 const Cupo = ({ cuotas }) => {
@@ -46,7 +52,9 @@ const Cupo = ({ cuotas }) => {
 export const PaginaCrearConIA = () => {
   const avisar = useAvisos();
   const cursos = useCursos({ archivado: false });
-  const [datos, setDatos] = useState({ cursoId: "", estudianteId: "", habilidad: "vocales", tematica: "animales", cantidad: 5, instruccion: "" });
+  const [datos, setDatos] = useState({ cursoId: "", estudianteId: "", habilidad: "vocales", modo: "catalogo", tematica: "animales", tematicaLibre: "", cantidad: 5, instruccion: "" });
+  const [tocada, setTocada] = useState(false); // el error de forma de la temática solo se muestra tras escribir o intentar enviar
+  const [anuncio, setAnuncio] = useState(""); // lo que lee un lector de pantalla cuando cambia el estado
   const cursoId = datos.cursoId || cursos.datos?.[0]?.id || "";
   const estudiantes = useEstudiantes({ cursoId, archivado: false });
   const generaciones = useConsulta(() => GeneracionApiHttp.listar(), []);
@@ -55,33 +63,50 @@ export const PaginaCrearConIA = () => {
   const [enviando, setEnviando] = useState(false);
   // Una clave por solicitud: si el envío se repite (doble clic, red lenta), el servidor devuelve la misma
   const clave = useRef(nuevoIdOperacion());
+  // Varios clics en el mismo instante: el estado de React aún no cambió, así que el cerrojo es una referencia
+  const enCurso = useRef(false);
 
   const hayActivas = (generaciones.datos || []).some(esActiva);
+  const libre = datos.modo === "libre";
+  // El servidor decide si la temática libre está disponible; hasta saberlo se mantiene desactivada
+  const libreHabilitada = cuotas.datos?.generacionLibreHabilitada === true;
+  const errorTematica = libre ? revisarTematica(datos.tematicaLibre) : null;
+  const ayudaLibre = libre ? ayudaTematica(datos.tematicaLibre) : null;
   const recargarGeneraciones = generaciones.recargar;
   const recargarCuotas = cuotas.recargar;
   useEffect(() => {
-    if (!hayActivas) return undefined;
-    const temporizador = setInterval(recargarGeneraciones, INTERVALO_SEGUIMIENTO_MS);
+    // Mientras se envía, la lista también se consulta: así se ve la solicitud «Generando» (y se puede cancelar)
+    if (!hayActivas && !enviando) return undefined;
+    const temporizador = setInterval(recargarGeneraciones, enviando ? INTERVALO_ENVIANDO_MS : INTERVALO_SEGUIMIENTO_MS);
     return () => {
       clearInterval(temporizador);
       // Al terminar la última, el cupo cambió (se consumió o se devolvió)
       recargarCuotas();
     };
-  }, [hayActivas, recargarGeneraciones, recargarCuotas]);
+  }, [hayActivas, enviando, recargarGeneraciones, recargarCuotas]);
 
   const poner = (campo) => (e) => setDatos((d) => ({ ...d, [campo]: e.target.value, ...(campo === "cursoId" && { estudianteId: "" }) }));
 
   const enviar = async (e) => {
     e.preventDefault();
+    // Un solo envío a la vez: varios clics seguidos no crean varias solicitudes
+    if (enCurso.current || enviando || hayActivas) return;
     if (datos.instruccion.length > MAX_INSTRUCCION) return;
+    if (errorTematica) {
+      setTocada(true);
+      return;
+    }
+    enCurso.current = true;
     setEnviando(true);
     setError(null);
+    setAnuncio("Generando la actividad. Esto puede tardar unos segundos.");
     try {
       const generacion = await GeneracionApiHttp.solicitar(clave.current, {
         cursoId,
         estudianteId: datos.estudianteId || undefined,
         habilidad: datos.habilidad,
-        tematica: datos.tematica,
+        modoTematica: datos.modo,
+        tematica: libre ? normalizarTematica(datos.tematicaLibre) : datos.tematica,
         cantidad: Number(datos.cantidad),
         instruccion: datos.instruccion.trim() || undefined
       });
@@ -91,23 +116,31 @@ export const PaginaCrearConIA = () => {
       if (generacion.estado === "completada") {
         setDatos((d) => ({ ...d, instruccion: "" }));
         avisar("Borrador listo. Revísalo antes de usarlo en clase.");
+        setAnuncio("La actividad está lista para revisar. Aparece en la lista de tus solicitudes.");
       } else if (generacion.estado === "fallida") {
-        avisar(MOTIVOS_GENERACION[generacion.errorCodigo] || "No se pudo crear la actividad. Puedes intentarlo de nuevo.", "error");
+        const motivo = MOTIVOS_GENERACION[generacion.errorCodigo] || "No se pudo crear la actividad. Puedes intentarlo de nuevo.";
+        avisar(motivo, "error");
+        setAnuncio(`No se pudo crear la actividad. ${motivo}`);
       } else if (generacion.estado === "interrumpida") {
         avisar("La solicitud se interrumpió antes de terminar. Puedes intentarlo de nuevo.", "error");
+        setAnuncio("La solicitud se interrumpió antes de terminar.");
       } else {
         avisar("Tu solicitud sigue en marcha. Aparecerá en la lista cuando termine.");
+        setAnuncio("Tu solicitud sigue en marcha.");
       }
       generaciones.recargar();
       cuotas.recargar();
     } catch (err) {
-      setError(err);
+      // El mensaje sale de un texto fijo por código: nunca repite lo que escribió el docente
+      setError({ message: mensajeDeError(err) });
+      setAnuncio(`No se pudo pedir la actividad. ${mensajeDeError(err)}`);
       // Un rechazo del servidor (sin cupo, apagada, otra en curso) cierra esa solicitud: la siguiente lleva clave nueva.
       // Un corte de red no trae código: se conserva la clave y el reintento no duplica nada.
       if (err.codigo) clave.current = nuevoIdOperacion();
       generaciones.recargar();
       cuotas.recargar();
     } finally {
+      enCurso.current = false;
       setEnviando(false);
     }
   };
@@ -118,7 +151,7 @@ export const PaginaCrearConIA = () => {
       avisar("Solicitud cancelada.");
       generaciones.recargar();
     } catch (err) {
-      avisar(err.message, "error");
+      avisar(mensajeDeError(err), "error");
     }
   };
 
@@ -155,10 +188,68 @@ export const PaginaCrearConIA = () => {
               </div>
             </fieldset>
 
+            <fieldset>
+              <legend className="mb-2 text-sm font-medium">¿Sobre qué temática?</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {Object.entries(MODOS_TEMATICA).map(([valor, texto]) => {
+                  const bloqueado = valor === "libre" && !libreHabilitada;
+                  return (
+                    <label key={valor} className={`rounded-2xl border-2 p-4 transition-colors ${bloqueado ? "cursor-not-allowed border-borde bg-slate-50 text-tenue" : datos.modo === valor ? "cursor-pointer border-marca-600 bg-marca-50" : "cursor-pointer border-borde hover:border-marca-200"}`}>
+                      <input type="radio" name="modo" value={valor} checked={datos.modo === valor} disabled={bloqueado} onChange={poner("modo")} className="sr-only" aria-describedby={`modo-${valor}`} />
+                      <span className="block font-extrabold">{texto}</span>
+                      <span id={`modo-${valor}`} className="text-sm text-tenue">
+                        {valor === "catalogo"
+                          ? "Palabras ya revisadas de 5 temáticas."
+                          : !cuotas.datos
+                            ? "Comprobando si está disponible…"
+                            : bloqueado
+                              ? "No está disponible por ahora. Usa una temática del catálogo."
+                              : "Escribe cualquier temática: frutas, colores, medios de transporte…"}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+
             <div className="grid gap-4 sm:grid-cols-2">
-              <Selector etiqueta="Temática" value={datos.tematica} onChange={poner("tematica")} opciones={opcionesDe(TEMATICAS)} />
-              <Selector etiqueta="¿Cuántos ejercicios?" value={datos.cantidad} onChange={poner("cantidad")} opciones={CANTIDADES_EJERCICIOS.map((n) => ({ valor: n, texto: `${n} ejercicios` }))} />
+              {libre ? (
+                <Campo
+                  className="sm:col-span-2"
+                  etiqueta="Escribe la temática"
+                  value={datos.tematicaLibre}
+                  maxLength={MAX_TEMATICA}
+                  onChange={(e) => { setTocada(true); poner("tematicaLibre")(e); }}
+                  onBlur={() => setTocada(true)}
+                  error={tocada ? errorTematica : undefined}
+                  ayuda={`${datos.tematicaLibre.length} de ${MAX_TEMATICA} caracteres. Solo letras y espacios.`}
+                  placeholder="frutas"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              ) : (
+                <Selector etiqueta="Temática" value={datos.tematica} onChange={poner("tematica")} opciones={opcionesDe(TEMATICAS)} />
+              )}
+              {!libre && <Selector etiqueta="¿Cuántos ejercicios?" value={datos.cantidad} onChange={poner("cantidad")} opciones={CANTIDADES_EJERCICIOS.map((n) => ({ valor: n, texto: `${n} ejercicios` }))} />}
             </div>
+
+            {libre && (
+              <div className="grid gap-3">
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Ejemplos de temáticas">
+                  <span className="text-sm text-tenue">Por ejemplo:</span>
+                  {EJEMPLOS_TEMATICA.map((ejemplo) => (
+                    <Boton key={ejemplo} variante="secundario" tamano="sm" onClick={() => { setTocada(true); setDatos((d) => ({ ...d, tematicaLibre: ejemplo })); }}>
+                      {ejemplo}
+                    </Boton>
+                  ))}
+                </div>
+                {ayudaLibre && <p className="rounded-xl bg-slate-50 p-3 text-sm text-tinta ring-1 ring-borde">{ayudaLibre}</p>}
+                <p id="aviso-datos" className="flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-sm font-medium text-amber-900 ring-1 ring-amber-200">
+                  <ShieldAlert className="mt-0.5 size-5 shrink-0" aria-hidden="true" /> {AVISO_DATOS}
+                </p>
+                <Selector className="sm:max-w-xs" etiqueta="¿Cuántos ejercicios?" value={datos.cantidad} onChange={poner("cantidad")} opciones={CANTIDADES_EJERCICIOS.map((n) => ({ valor: n, texto: `${n} ejercicios` }))} />
+              </div>
+            )}
 
             <AreaTexto
               etiqueta="¿Quieres añadir algo? (opcional)"
@@ -166,14 +257,17 @@ export const PaginaCrearConIA = () => {
               maxLength={MAX_INSTRUCCION}
               onChange={poner("instruccion")}
               placeholder="Practicar especialmente la A y la E"
-              ayuda={`${datos.instruccion.length} de ${MAX_INSTRUCCION} caracteres. No escribas nombres de estudiantes.`}
+              ayuda={`${datos.instruccion.length} de ${MAX_INSTRUCCION} caracteres. ${libre ? AVISO_DATOS : "No escribas nombres de estudiantes."}`}
             />
 
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Boton type="submit" tamano="lg" cargando={enviando}>
+              <Boton type="submit" tamano="lg" cargando={enviando} disabled={hayActivas && !enviando}>
                 <Sparkles className="size-5" aria-hidden="true" /> {enviando ? "Generando…" : "Generar actividad"}
               </Boton>
-              <p role="status" className="text-sm text-tenue">{enviando ? "Esto puede tardar unos segundos. No cierres esta página." : ""}</p>
+              {/* Región viva: anuncia a lectores de pantalla cuándo empieza, termina o falla la generación */}
+              <p role="status" aria-live="polite" className="text-sm text-tenue">
+                {enviando ? "Esto puede tardar unos segundos. No cierres esta página." : hayActivas ? "Ya tienes una actividad generándose. Cuando termine podrás pedir otra." : anuncio}
+              </p>
             </div>
           </form>
         </Tarjeta>
@@ -188,7 +282,11 @@ export const PaginaCrearConIA = () => {
                 <Link to="/panel/actividades/nueva" className="font-medium underline underline-offset-2">crear la actividad a mano</Link>.
               </p>
             ) : (
-              <p>Recibirás un borrador: revísalo y apruébalo antes de usarlo en clase. Solo se usan palabras del catálogo revisado y nunca se envían datos de tus estudiantes.</p>
+              <p>
+                {libre
+                  ? "Recibirás un borrador: la IA propone las palabras, el sistema revisa que sean adecuadas y calcula las respuestas, y tú lo revisas y apruebas antes de usarlo en clase. No se envían datos de tus estudiantes."
+                  : "Recibirás un borrador: revísalo y apruébalo antes de usarlo en clase. Solo se usan palabras del catálogo revisado y nunca se envían datos de tus estudiantes."}
+              </p>
             )}
           </div>
         </div>
@@ -212,7 +310,7 @@ export const PaginaCrearConIA = () => {
                 <li key={g.id} className="flex flex-col gap-3 rounded-2xl border border-borde bg-white p-4 sm:flex-row sm:items-center">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">
-                      {HABILIDADES[p.habilidad]?.texto} · {TEMATICAS[p.tematica]} · {p.cantidad} ejercicios
+                      {HABILIDADES[p.habilidad]?.texto} · {nombreTematica(p)} · {p.cantidad} ejercicios
                     </p>
                     <p className="text-sm text-tenue">
                       {new Date(g.creadaEn).toLocaleString("es-EC", { dateStyle: "medium", timeStyle: "short" })}

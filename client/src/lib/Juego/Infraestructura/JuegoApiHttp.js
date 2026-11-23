@@ -9,6 +9,8 @@ export const JuegoApiHttp = {
   desarchivar: (id) => pedir(`/juegos/${id}/desarchivar`, { metodo: "POST" }),
 
   recursos: (tematica) => pedir("/recursos", { consulta: { tematica } }),
+  // Lista cerrada de iconos permitidos (agrupados): de ahí elige el docente en las actividades de temática libre
+  iconos: () => pedir("/iconos"),
 
   listarVersiones: (juegoId) => pedir(`/juegos/${juegoId}/versiones`),
   crearVersion: (juegoId, datos) => pedir(`/juegos/${juegoId}/versiones`, { metodo: "POST", cuerpo: datos }),

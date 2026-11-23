@@ -7,12 +7,15 @@ import { ESTADOS_JUEGO, HABILIDADES, nombreCurso, nombreEstudiante, opcionesDe }
 
 const CLAVES_FILTRO = ["cursoId", "estudianteId", "habilidad", "estado", "texto"];
 import { useJuegos } from "../../Aplicacion/useJuegos";
+import { etiquetaTematica } from "../../Dominio/Tematica";
 
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "short" }) : "");
 
 export const TarjetaActividad = ({ juego, cursos }) => {
   const curso = cursos.find((c) => c.id === juego.cursoId);
   const estado = ESTADOS_JUEGO[juego.estado] || ESTADOS_JUEGO.borrador;
+  // Solo las de temática libre llevan etiqueta; las del catálogo se ven como siempre
+  const etiqueta = etiquetaTematica(juego.configuracion);
   return (
     <article className="group relative flex flex-col rounded-2xl border border-borde bg-white p-5 transition-[border-color] duration-200 hover:border-marca-200 hover:shadow-marca-900/5">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -27,6 +30,7 @@ export const TarjetaActividad = ({ juego, cursos }) => {
       <p className="mt-1 text-sm text-tenue">
         Para: {curso ? nombreCurso(curso) : "curso archivado"} · {HABILIDADES[juego.habilidad]?.texto}
       </p>
+      {etiqueta && <p className="mt-2"><Insignia tono="gris">{etiqueta}</Insignia></p>}
       <p className="mt-1 text-xs text-tenue">Actualizada el {fecha(juego.actualizadoEn || juego.creadoEn)}</p>
       <div className="relative z-10 mt-5 flex flex-wrap gap-2 pt-1">
         {juego.estado === "listo" ? (

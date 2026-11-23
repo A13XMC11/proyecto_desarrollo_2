@@ -14,3 +14,7 @@ export const useJuego = (id) =>
 // Palabras del catálogo de una temática (de ahí salen los ejercicios)
 export const useRecursos = (tematica) =>
   useConsulta(() => (tematica ? JuegoApiHttp.recursos(tematica) : Promise.resolve([])), [tematica]);
+
+// Iconos permitidos para temática libre; solo se piden cuando hacen falta
+export const useIconos = (activo) =>
+  useConsulta(() => (activo ? JuegoApiHttp.iconos() : Promise.resolve({ categorias: [] })), [activo]);

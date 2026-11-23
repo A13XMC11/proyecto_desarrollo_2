@@ -26,6 +26,12 @@ export const MODOS_TEMATICA = {
   libre: "Otra temática"
 };
 
+// Nombres de las categorías de iconos (el servidor las entrega por clave)
+export const CATEGORIAS_ICONOS = {
+  animales: "Animales", frutas: "Frutas", verduras: "Verduras", objetos: "Objetos", naturaleza: "Naturaleza",
+  cuerpo: "Cuerpo", escuela: "Escuela", comida: "Comida", transporte: "Transporte", juguetes: "Juguetes"
+};
+
 export const ESTADOS_JUEGO = {
   borrador: { texto: "Borrador", tono: "ambar" },
   listo: { texto: "Lista", tono: "verde" },
@@ -43,12 +49,16 @@ export const ESTADOS_GENERACION = {
 // Explicación para el docente según el código que guarda el servidor
 export const MOTIVOS_GENERACION = {
   CANCELADA_POR_DOCENTE: "La cancelaste.",
-  CONTENIDO_INVALIDO: "La IA propuso ejercicios que no pasaron la revisión automática. Puedes pedirla de nuevo.",
+  CONTENIDO_INVALIDO: "La IA propuso palabras o textos que no pasaron la revisión automática para niños. Este intento cuenta como una de las generaciones del día. Prueba con otra temática.",
+  GENERADOR_CANDIDATAS_INSUFICIENTES: "No se encontraron suficientes palabras válidas para esa temática. Prueba con otra temática o con palabras más comunes. Este intento cuenta como una de las generaciones del día.",
   PROVEEDOR_ERROR: "El servicio de IA no respondió bien. Inténtalo de nuevo en unos minutos.",
   CATALOGO_INSUFICIENTE: "No hay suficientes palabras revisadas para esa temática.",
-  GENERACION_DESHABILITADA: "La creación con IA todavía no está habilitada.",
-  GENERACION_EN_CURSO: "Ya tenías otra actividad generándose.",
-  CUPO_DIARIO_AGOTADO: "Ya usaste todas las actividades con IA de hoy.",
+  GENERACION_DESHABILITADA: "La creación con IA todavía no está habilitada. Puedes crear la actividad a mano.",
+  GENERACION_LIBRE_DESHABILITADA: "La opción «Otra temática» todavía no está habilitada. Elige una temática del catálogo.",
+  TEMATICA_NO_PERMITIDA: "Esa temática no es adecuada para esta actividad. Prueba con otra, por ejemplo frutas, colores o medios de transporte.",
+  CLAVE_REUTILIZADA: "Esta solicitud ya se había enviado con otros datos. Vuelve a pedirla desde cero.",
+  GENERACION_EN_CURSO: "Ya tienes otra actividad generándose. Espera a que termine.",
+  CUPO_DIARIO_AGOTADO: "Ya usaste todas las actividades con IA de hoy. Mañana tendrás más.",
   PRESUPUESTO_AGOTADO: "La creación con IA no estaba disponible en ese momento.",
   GENERADOR_TIEMPO_AGOTADO: "La IA tardó demasiado en responder. Prueba de nuevo en unos minutos.",
   GENERADOR_ERROR: "No se pudo conectar con la IA. Prueba de nuevo en unos minutos.",
@@ -58,6 +68,15 @@ export const MOTIVOS_GENERACION = {
   GENERADOR_RESPUESTA_INVALIDA: "La IA respondió algo que no se pudo usar. Prueba de nuevo.",
   ERROR_AL_GUARDAR: "La actividad se generó pero no se pudo guardar. Prueba de nuevo.",
   interrumpida: "Se cortó mientras se generaba. Puedes pedirla de nuevo."
+};
+
+// Rechazos del servidor al guardar o aprobar una actividad de temática libre. Fijos: nunca repiten lo escrito.
+export const MENSAJES_CONTENIDO = {
+  PALABRA_NO_PERMITIDA: "Una palabra de la actividad no es adecuada para niños, así que no se puede guardar.",
+  TEXTO_NO_PERMITIDO: "La consigna o la pista usa una palabra que no es adecuada para niños. Escríbela de otra forma.",
+  ICONO_NO_PERMITIDO: "Ese icono no está en la lista permitida. Elige otro de la lista.",
+  RESPUESTA_REVELADA: "La consigna o la pista dice la respuesta. Escríbela sin revelarla.",
+  CONSIGNA_INVALIDA: "La consigna o la pista no tiene palabras. Escribe un texto."
 };
 
 export const AVATARES = ["gato", "ave", "tortuga", "pez", "conejo", "ardilla"];

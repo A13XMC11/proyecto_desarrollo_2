@@ -4,21 +4,28 @@ import { Archive, ArchiveRestore, ArrowLeft, BarChart3, CheckCircle2, Eye, FileP
 import { Boton, BotonEnlace, Cargando, Insignia, MensajeError, Tarjeta } from "../../../../Infraestructura/ui/componentes";
 import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
 import { Confirmar } from "../../../Aula/Infraestructura/ui/PaginaCursos";
-import { ESTADOS_JUEGO, HABILIDADES, TEMATICAS } from "../../Dominio/ValoresPermitidos";
+import { ESTADOS_JUEGO, HABILIDADES } from "../../Dominio/ValoresPermitidos";
 import { aContrato, aFormulario, revisar } from "../../Dominio/Ejercicios";
-import { useJuego, useRecursos } from "../../Aplicacion/useJuegos";
+import { aContratoLibre, aFormularioLibre, revisarLibre } from "../../Dominio/EjerciciosLibres";
+import { esLibre, nombreTematica } from "../../Dominio/Tematica";
+import { mensajeDeError } from "../../../Generacion/Dominio/Mensajes";
+import { useIconos, useJuego, useRecursos } from "../../Aplicacion/useJuegos";
 import { JuegoApiHttp } from "../JuegoApiHttp";
 import { EditorEjercicios } from "./EditorEjercicios";
+import { EditorEjerciciosLibres } from "./EditorEjerciciosLibres";
 import { VistaPrevia } from "./VistaPrevia";
 
 // Vista de solo lectura de una versión aprobada (inmutable)
-const VistaVersion = ({ version }) => (
+const VistaVersion = ({ version, libre = false }) => (
   <ol className="grid gap-3 sm:grid-cols-2">
     {version.ejercicios.map((e, i) => (
       <li key={e.id} className="rounded-2xl border border-borde bg-white p-4">
         <p className="text-xs font-medium text-tenue">Ejercicio {i + 1}</p>
         <p className="mt-1 text-sm">{e.consigna}</p>
-        <p className="my-2 font-titulo text-2xl font-black text-marca-900">{e.objetivo}</p>
+        <p className="my-2 font-titulo text-2xl font-black text-marca-900">
+          {libre && e.icono && <span className="mr-2" aria-hidden="true">{e.icono}</span>}
+          {e.objetivo ?? e.palabraId}
+        </p>
         {e.opciones ? (
           <div className="flex gap-2">
             {e.opciones.map((o) => (
@@ -87,6 +94,9 @@ export const PaginaActividad = () => {
   const avisar = useAvisos();
   const consulta = useJuego(id);
   const [ejercicios, setEjercicios] = useState([]);
+  // Temática libre: solo se corrigen título, consigna, pista e icono (la palabra y la respuesta las calcula el servidor)
+  const [libres, setLibres] = useState([]);
+  const [titulo, setTitulo] = useState("");
   const [errores, setErrores] = useState([]);
   const [ocupado, setOcupado] = useState(null);
   const [confirmar, setConfirmar] = useState(null);
@@ -96,11 +106,16 @@ export const PaginaActividad = () => {
   const borrador = versiones.find((v) => v.estado === "borrador");
   const vigente = versiones.find((v) => v.id === juego?.versionActualId);
   const habilidad = juego?.habilidad;
-  const catalogo = useRecursos(borrador?.configuracion.tematica);
+  const libre = esLibre(borrador?.configuracion);
+  // Una actividad libre no tiene catálogo de palabras: no se pide
+  const catalogo = useRecursos(borrador && !libre ? borrador.configuracion.tematica : undefined);
   const recursos = catalogo.datos || [];
+  const iconos = useIconos(Boolean(borrador) && libre);
 
   useEffect(() => {
     setEjercicios(aFormulario(borrador?.ejercicios));
+    setLibres(aFormularioLibre(borrador?.ejercicios));
+    setTitulo(consulta.datos?.juego.titulo || "");
     setErrores([]);
     setPrevia(null);
   }, [borrador?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -110,13 +125,20 @@ export const PaginaActividad = () => {
     try {
       await funcion();
     } catch (error) {
-      avisar(error.message, "error");
+      avisar(mensajeDeError(error), "error");
     } finally {
       setOcupado(null);
     }
   };
 
   const validar = () => {
+    if (libre) {
+      const encontrados = revisarLibre(libres);
+      setErrores(encontrados);
+      const hay = encontrados.some((e) => Object.keys(e).length) || titulo.trim().length < 3;
+      if (hay) avisar("Hay textos por corregir. Están marcados en rojo.", "error");
+      return !hay;
+    }
     if (!recursos.length) {
       avisar("El catálogo de palabras todavía no cargó. Inténtalo de nuevo en un momento.", "error");
       return false;
@@ -130,6 +152,10 @@ export const PaginaActividad = () => {
 
   // Previsualiza lo que hay en el editor, aunque aún no esté guardado
   const previsualizar = () => {
+    if (libre) {
+      setPrevia(aContratoLibre(libres, borrador.ejercicios));
+      return;
+    }
     if (!recursos.length) {
       avisar("El catálogo de palabras todavía no cargó. Inténtalo de nuevo en un momento.", "error");
       return;
@@ -145,9 +171,15 @@ export const PaginaActividad = () => {
     }
   };
 
+  const contrato = () => (libre ? aContratoLibre(libres, borrador.ejercicios) : aContrato(ejercicios, habilidad, recursos));
+  const guardarTitulo = async () => {
+    if (libre && titulo.trim() !== juego.titulo) await JuegoApiHttp.actualizar(id, { titulo: titulo.trim() });
+  };
+
   const guardar = conAccion("guardar", async () => {
     if (!validar()) return;
-    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, habilidad, recursos));
+    await guardarTitulo();
+    await JuegoApiHttp.actualizarVersion(id, borrador.id, contrato());
     setPrevia(null);
     avisar("Borrador guardado.");
     consulta.recargar();
@@ -156,11 +188,12 @@ export const PaginaActividad = () => {
   const aprobar = conAccion("aprobar", async () => {
     if (!validar()) return;
     const cantidad = borrador.configuracion.cantidadEjercicios;
-    if (ejercicios.length !== cantidad) {
+    if ((libre ? libres : ejercicios).length !== cantidad) {
       avisar(`Para aprobar hacen falta exactamente ${cantidad} ejercicios.`, "error");
       return;
     }
-    await JuegoApiHttp.actualizarVersion(id, borrador.id, aContrato(ejercicios, habilidad, recursos));
+    await guardarTitulo();
+    await JuegoApiHttp.actualizarVersion(id, borrador.id, contrato());
     await JuegoApiHttp.aprobarVersion(id, borrador.id);
     avisar("Actividad aprobada. Ya se puede jugar en el aula.");
     consulta.recargar();
@@ -169,6 +202,7 @@ export const PaginaActividad = () => {
   const nuevaVersion = conAccion("nueva", async () => {
     const base = vigente || versiones[0];
     await JuegoApiHttp.crearVersion(id, {
+      modoTematica: base.configuracion.modoTematica,
       tematica: base.configuracion.tematica,
       cantidadEjercicios: base.configuracion.cantidadEjercicios,
       ejercicios: base.ejercicios
@@ -219,7 +253,7 @@ export const PaginaActividad = () => {
           <h1 className="text-2xl font-extrabold sm:text-3xl">{juego.titulo}</h1>
           {config && (
             <p className="mt-1 text-tenue">
-              {HABILIDADES[juego.habilidad]?.texto} · {TEMATICAS[config.tematica]} · {config.cantidadEjercicios} ejercicios
+              {HABILIDADES[juego.habilidad]?.texto} · {nombreTematica(config)} · {config.cantidadEjercicios} ejercicios
             </p>
           )}
         </div>
@@ -239,7 +273,7 @@ export const PaginaActividad = () => {
             <div>
               <h2 id="titulo-borrador" className="font-extrabold">Borrador {borrador.numero ? `de la versión ${borrador.numero}` : ""}</h2>
               <p className="text-sm text-tenue">Revisa cada ejercicio. Nada llega a los estudiantes hasta que lo apruebes.</p>
-              {juego.origen === "ia" && (
+              {juego.origen === "ia" && !libre && (
                 <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-marca-800">
                   <Sparkles className="size-4" aria-hidden="true" /> Propuesto por la IA. Puede equivocarse: corrige lo que haga falta antes de aprobar.
                 </p>
@@ -252,8 +286,25 @@ export const PaginaActividad = () => {
               <Boton tamano="sm" cargando={ocupado === "aprobar"} onClick={aprobar}><CheckCircle2 className="size-4" aria-hidden="true" /> Aprobar</Boton>
             </div>
           </Tarjeta>
-          <MensajeError error={catalogo.error} alReintentar={catalogo.recargar} />
-          <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} habilidad={habilidad} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
+          {libre ? (
+            <>
+              <MensajeError error={iconos.error} alReintentar={iconos.recargar} />
+              <EditorEjerciciosLibres
+                titulo={titulo}
+                setTitulo={setTitulo}
+                ejercicios={libres}
+                setEjercicios={setLibres}
+                errores={errores}
+                errorTitulo={titulo.trim().length < 3 ? "El título necesita al menos 3 caracteres." : undefined}
+                categoriasIconos={iconos.datos?.categorias}
+              />
+            </>
+          ) : (
+            <>
+              <MensajeError error={catalogo.error} alReintentar={catalogo.recargar} />
+              <EditorEjercicios ejercicios={ejercicios} setEjercicios={setEjercicios} habilidad={habilidad} cantidad={borrador.configuracion.cantidadEjercicios} errores={errores} recursos={recursos} />
+            </>
+          )}
         </section>
       ) : vigente ? (
         <section aria-labelledby="titulo-vigente">
@@ -270,7 +321,7 @@ export const PaginaActividad = () => {
               )}
             </div>
           </div>
-          <VistaVersion version={vigente} />
+          <VistaVersion version={vigente} libre={esLibre(vigente.configuracion)} />
         </section>
       ) : (
         <Tarjeta>

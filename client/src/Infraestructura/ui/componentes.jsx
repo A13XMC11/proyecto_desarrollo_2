@@ -28,9 +28,9 @@ export const Boton = ({ variante = "primario", tamano = "md", cargando = false, 
   <button
     type="button"
     className={clasesBoton(variante, tamano, className)}
-    disabled={cargando || resto.disabled}
     aria-busy={cargando || undefined}
     {...resto}
+    disabled={cargando || resto.disabled}
   >
     {cargando && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
     {children}
