@@ -26,12 +26,15 @@ const Final = ({ partida, alOtro, alSalir }) => {
   const total = partida.ejercicios.length;
   const primerIntento = partida.ejercicios.filter((e) => e.acertado && e.intentos === 1).length;
   const resueltos = partida.ejercicios.filter((e) => e.acertado).length;
+  // El botón «Ver cómo me fue» desaparece al terminar: el foco se lleva al título para que se lea y Tab llegue a los botones
+  const titulo = useRef(null);
+  useEffect(() => { titulo.current?.focus({ preventScroll: true }); }, []);
   return (
     <div className="animate-aparecer mx-auto grid max-w-lg justify-items-center text-center">
       <span className="mb-5 grid size-20 place-items-center rounded-full bg-acento/25 text-amber-700">
         <PartyPopper className="size-10" aria-hidden="true" />
       </span>
-      <h2 className="text-4xl font-black">¡Terminaste!</h2>
+      <h2 ref={titulo} tabIndex={-1} className="text-4xl font-black focus:outline-none">¡Terminaste!</h2>
       <p className="mt-3 text-xl text-tenue">
         Resolviste <strong className="text-tinta">{resueltos} de {total}</strong> ejercicios.
       </p>
@@ -48,12 +51,12 @@ export const GamePlayer = ({ partidaId, alOtro, alSalir }) => {
   const { partida, ejercicio, indice, fase, resultado, pista, enviando, error, responder, reintentar, continuar, pedirPista, recargar } = usePartida(partidaId);
   const seccion = useRef(null);
 
-  // Cada vez que toca responder (ejercicio nuevo o "Intentar otra vez"), el foco va a la primera opción:
+  // Cada vez que toca responder (ejercicio nuevo, "Intentar otra vez" o tras mostrar la pista), el foco va a la primera opción:
   // el botón que se pulsó desaparece y, sin esto, quien usa teclado perdería su lugar
   useEffect(() => {
     if (fase !== "respondiendo") return;
     seccion.current?.querySelector("[role=group] button:not([disabled]), [aria-label='Sílabas disponibles'] button:not([disabled])")?.focus({ preventScroll: true });
-  }, [fase, ejercicio?.id]);
+  }, [fase, ejercicio?.id, pista]);
 
   if (fase === "cargando") {
     return <div className="mx-auto h-96 w-full max-w-3xl animate-pulse rounded-3xl bg-white/70" role="status" aria-label="Cargando la actividad" />;
