@@ -14,7 +14,7 @@ const prueba = pruebasConBase("ModoTematicaGeneracion", { sql: true, mongo: true
 const falso = new GeneradorContenidoFalso();
 
 const config = () => new ConfiguracionGeneracion({
-  habilitada: true, tiempoLimiteMs: 5000, margenConciliacionMs: 0,
+  habilitada: true, libreHabilitada: true, tiempoLimiteMs: 5000, margenConciliacionMs: 0,
   presupuestoMensual: 1e6, costoMaximoLlamada: 1, tarifaEntrada: 1, tarifaSalida: 2
 });
 const montar = ({ filtroContenido } = {}) => {
@@ -79,7 +79,7 @@ describe("SolicitarGeneracion: modo de temática (paso 3)", () => {
     const { c, llamadas } = montar();
     await assert.rejects(
       c.solicitar.ejecutar(esc.docenteId, clave(), datosDe(esc, { modoTematica: "libre", tematica: "sonidos de animales" })),
-      (e) => e.statusCode === 400 && e.codigo === "TEMATICA_LIBRE_NO_DISPONIBLE"
+      (e) => e.statusCode === 400 && e.codigo === "FILTRO_CONTENIDO_REQUERIDO"
     );
     assert.deepEqual(await c.repo.findByDocente(esc.docenteId), []);
     assert.equal(await usado(c, esc.docenteId), 0);

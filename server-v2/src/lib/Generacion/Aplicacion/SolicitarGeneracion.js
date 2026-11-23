@@ -17,8 +17,8 @@ const mismosParametros = (a, b) =>
 // Si la solicitud se rechaza antes de llamar al proveedor (apagada, otra en curso, sin cupo) la generación
 // queda "fallida" con su código, la reserva se libera y el rechazo se informa como error.
 class SolicitarGeneracion {
-  // filtroContenido (puerto IFiltroContenido) es opcional: sin él la temática libre no está disponible. Hasta el
-  // paso 7 la composición real no lo entrega, así que por HTTP solo se admite el modo catálogo.
+  // filtroContenido (puerto IFiltroContenido): la composición real siempre lo entrega. Si faltara, la entidad Generacion
+  // rechaza la temática libre (FILTRO_CONTENIDO_REQUERIDO): falla cerrado, nunca sin filtrar.
   constructor({ generacionRepository, cursoRepository, estudianteRepository, canalRepository, config, reservarCupo, liberarReserva, procesarGeneracion, conciliar, filtroContenido }) {
     Object.assign(this, { generacionRepository, cursoRepository, estudianteRepository, canalRepository, config, reservarCupo, liberarReserva, procesarGeneracion, conciliar, filtroContenido });
   }
@@ -62,9 +62,10 @@ class SolicitarGeneracion {
 
   // Pasos 1 y 2: propiedad, estado de curso y estudiante, y parámetros válidos
   async armar(docenteId, claveSolicitud, data) {
-    // Falla cerrado: sin filtro de contenido no se acepta una temática libre, y se dice antes de guardar o reservar nada
-    if (data.modoTematica === "libre" && !this.filtroContenido) {
-      throw new EntradaInvalida("La temática libre todavía no está disponible", "TEMATICA_LIBRE_NO_DISPONIBLE");
+    // Interruptor de la temática libre: se dice antes de guardar nada o reservar cupo. (Con la IA apagada, la solicitud
+    // sigue el camino de siempre y se rechaza como GENERACION_DESHABILITADA.)
+    if (data.modoTematica === "libre" && this.config.habilitada && !this.config.libreHabilitada) {
+      throw new ServicioNoDisponible("La temática libre todavía no está habilitada. Elige una temática del catálogo o crea la actividad a mano.", "GENERACION_LIBRE_DESHABILITADA");
     }
     const curso = await this.cursoRepository.findById(data.cursoId, docenteId);
     if (!curso) throw new NoEncontrado("Curso no encontrado");

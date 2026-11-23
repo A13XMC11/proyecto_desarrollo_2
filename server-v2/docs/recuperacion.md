@@ -124,6 +124,7 @@ Resultado de la ejecución del 2026-11-22: correcto. 16 filas y 29 documentos; r
 | Se reinicia con generaciones a medias | Al arrancar se concilian: las que ya tienen juego se completan sin duplicar y las vencidas pasan a `interrumpida`, **sin reintentar** (el proveedor pudo cobrar) | `tests/lib/Generacion/Aplicacion/FlujoGeneracion.test.js` |
 | Cambia `SESSION_SECRET` | Las cookies existentes dejan de valer: todos vuelven a ingresar. Para rotarlo sin cortar sesiones, poner el nuevo **primero** y el anterior después, separados por coma | `src/Infraestructura/http/sesion.js` |
 | Se apaga la generación (`AI_ENABLED=false`) | Biblioteca y partidas siguen; generar responde 503 `GENERACION_DESHABILITADA` | `recorrido.test.js` |
+| Se apaga la temática libre (`GENERACION_LIBRE_HABILITADA=false`) | Lo ya generado con temática libre se conserva, se abre y se juega; pedir otra libre responde 503 `GENERACION_LIBRE_DESHABILITADA` sin gastar cupo; el modo catálogo sigue | `generacionLibre.test.js`, `modoTematica.test.js` |
 | Se agota el cupo o el presupuesto de IA | El servidor lo rechaza aunque el botón no esté desactivado (la reserva es atómica en PostgreSQL) | `FlujoGeneracion.test.js` |
 | Cae una de las dos bases | No hay comportamiento definido ni probado: lo que la necesite fallará con error 500 y no hay reintentos ni cola. Se revisa en el ensayo con el alojamiento real | No probado |
 

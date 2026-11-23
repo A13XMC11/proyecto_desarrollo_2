@@ -357,6 +357,44 @@ El generador falso tiene ahora una rama libre para probar todo el flujo sin prov
 Las celdas en negrita alcanzan justo para 10 ejercicios de vocales (no sobra ninguna). Las palabras que no servían a ninguna habilidad se quitaron del diccionario; si una combinación no
 alcanzara, el falso fallaría con `GENERADOR_CANDIDATAS_INSUFICIENTES` en lugar de inventar palabras.
 
+### Temática libre: conexión de punta a punta (rama `feature/generacion-libre`, paso 7)
+
+La temática libre ya se puede pedir por HTTP, **apagada por defecto** tras un interruptor propio.
+
+**Interruptor `GENERACION_LIBRE_HABILITADA`** (`.env.example`): solo el valor exacto `true` la enciende; cualquier otro la deja apagada.
+- Apagada (`false` o sin definir): una solicitud libre responde **503 `GENERACION_LIBRE_DESHABILITADA`** antes de guardar nada, reservar cupo o llamar al generador.
+  El modo catálogo no depende de ella.
+- Encendida con `AI_ENABLED=false`: sigue aplicando 503 `GENERACION_DESHABILITADA` (la IA apagada manda).
+- Encendida con `AI_ENABLED=true`: se acepta. Los códigos `TEMATICA_LIBRE_NO_DISPONIBLE` y el fail-closed por configuración faltante desaparecen: la composición siempre entrega el filtro
+  y la lista de iconos al generador (el falso y el real), y si no cargan el servidor no arranca.
+
+**Orden de las comprobaciones de una solicitud libre** (todo ocurre antes de reservar cupo o llamar al generador):
+1. Interruptor encendido (503 si no).
+2. Curso y estudiante del docente (404 si son ajenos), canal, cantidad permitida.
+3. Temática válida: 3 a 40 caracteres, solo letras del español y espacios (400 si no).
+4. **Filtro de contenido sobre la temática**: bloqueada = 400 `TEMATICA_NO_PERMITIDA`, sin guardar la generación, sin gastar cupo y sin llamar al generador; el mensaje no repite el término.
+5. Idempotencia: misma clave + mismos parámetros (ahora incluido `modoTematica`) = la misma generación (200, sin gastar); otros parámetros u otro modo = 409 `CLAVE_REUTILIZADA`.
+6. Conciliación, cupo diario (3 por docente, compartido con el catálogo), una generación simultánea por docente y presupuesto global: **las mismas reglas** que el catálogo.
+
+**Procesamiento.** `ProcesarGeneracion` no pide recursos al catálogo en modo libre (`recursos: []`) y pasa `modoTematica` al generador. Lo que este devuelve se valida con la validación libre
+(silabeador, filtro sobre palabras, consignas y pistas, lista de iconos, respuesta calculada por el servidor) y se guarda como borrador de origen `ia` con `modoTematica: "libre"` y el título
+armado por el servidor. El modo catálogo no cambió (solo la solicitud al generador incluye ahora `modoTematica`).
+
+**Fallos.** Un contenido inválido o `GENERADOR_CANDIDATAS_INSUFICIENTES` **siguen consumiendo cupo** (decisión mantenida: pudo haber costo). Dejan la generación en `fallida`
+con su código consultable (`CONTENIDO_INVALIDO`, `GENERADOR_CANDIDATAS_INSUFICIENTES`…); el detalle por categoría de descartes queda en el registro del servidor, sin repetir términos bloqueados. Cancelar,
+consultar y conciliar una generación libre funcionan igual que en el catálogo.
+
+**Resultados e inicio.** `GET /api/resultados` y `GET /api/inicio` funcionan con versiones libres sin cambios: ningún cálculo depende de `recursoId` ni del catálogo (verificado con una prueba HTTP).
+
+**Evidencia.** `tests/lib/Generacion/Aplicacion/GeneracionLibre.test.js` (caso de uso con bases reales), `tests/http/generacionLibre.test.js` (de la solicitud a los resultados, 4 habilidades × frutas, colores y
+sonidos de animales × 5 y 10 ejercicios, más seguridad), `tests/lib/Generacion/Infraestructura/crearGeneradorLibre.test.js` (composición). Se comprobó con mutaciones que las pruebas detectan un filtro previo al cupo roto,
+una idempotencia sin modo y un interruptor ignorado.
+
+**Límite.** Con el generador falso la temática libre es contenido de ejemplo (ver C7 en `limites-y-problemas-conocidos.md`); con la IA real no se ha probado ni medido (paso 10).
+
+**Ampliación del alcance.** La temática libre amplía el SRS: la restricción del catálogo local revisado (§2.5 y §5.4) y el RNF-011, que fijaban el contenido a una lista cerrada. Ahora el contenido lo propone la IA a partir de una temática del docente y lo
+protegen otros controles (silabeador propio, filtro de contenido, lista cerrada de iconos y aprobación del docente). Esta ampliación **debe validarse con el docente de la asignatura** antes de habilitarla en un entorno real.
+
 ## 4. Ejemplos
 
 ### Respuestas válidas

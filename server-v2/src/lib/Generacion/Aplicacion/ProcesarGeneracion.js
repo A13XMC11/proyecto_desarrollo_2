@@ -13,8 +13,10 @@ const MAX_TEXTO_PROVEEDOR = 100; // largo de las columnas proveedor y modelo
 // Cupo: si el generador falla o el contenido es inválido, el cupo diario queda consumido (pudo haber costo);
 // el consumo real se registra cuando se conoce y, si no, la reserva global se mantiene hasta conciliar.
 class ProcesarGeneracion {
-  constructor({ generacionRepository, juegoRepository, versionRepository, estudianteRepository, generador, catalogo, config, registrarConsumo, liberarReserva }) {
-    Object.assign(this, { generacionRepository, juegoRepository, versionRepository, estudianteRepository, generador, catalogo, config, registrarConsumo, liberarReserva });
+  // filtroContenido (IFiltroContenido) y emojisPermitidos (IEmojisPermitidos): con ellos se valida lo que devuelve el generador
+  // en temática libre, que no tiene catálogo.
+  constructor({ generacionRepository, juegoRepository, versionRepository, estudianteRepository, generador, catalogo, config, registrarConsumo, liberarReserva, filtroContenido, emojisPermitidos }) {
+    Object.assign(this, { generacionRepository, juegoRepository, versionRepository, estudianteRepository, generador, catalogo, config, registrarConsumo, liberarReserva, filtroContenido, emojisPermitidos });
   }
 
   async ejecutar(generacion) {
@@ -44,11 +46,13 @@ class ProcesarGeneracion {
     return {
       habilidad: parametros.habilidad,
       mecanica,
+      modoTematica: parametros.modoTematica,
       tematica: parametros.tematica,
       cantidad: parametros.cantidad,
       franjaEdad: estudiante ? estudiante.franjaEdad : undefined,
       instruccion: parametros.instruccion,
-      recursos: recursosParaGeneracion(this.catalogo, parametros)
+      // La temática libre no tiene catálogo: el generador propone las palabras y el servidor las valida
+      recursos: parametros.modoTematica === "libre" ? [] : recursosParaGeneracion(this.catalogo, parametros)
     };
   }
 
@@ -109,13 +113,14 @@ class ProcesarGeneracion {
     return await this.estadoFinal(generacion);
   }
 
-  // La salida del generador es una propuesta no confiable: se valida entera contra el catálogo
+  // La salida del generador es una propuesta no confiable: se valida entera contra el catálogo (o, en temática libre,
+  // con las reglas de la validación libre: silabeador, filtro de contenido y lista de iconos)
   validar({ parametros, mecanica, id, docenteId }, titulo, ejercicios) {
     if (!Array.isArray(ejercicios)) throw new EntradaInvalida("ejercicios inválidos");
     VersionJuego.rechazarCamposDesconocidos(ejercicios);
-    const configuracion = { habilidad: parametros.habilidad, mecanica, tematica: parametros.tematica, cantidadEjercicios: parametros.cantidad };
+    const configuracion = { habilidad: parametros.habilidad, mecanica, modoTematica: parametros.modoTematica, tematica: parametros.tematica, cantidadEjercicios: parametros.cantidad };
     new VersionJuego({ juegoId: SIN_JUEGO, configuracion, ejercicios })
-      .validarContenido(this.catalogo, { permitirDiez: this.config.permitirDiez });
+      .validarContenido(this.catalogo, { permitirDiez: this.config.permitirDiez, filtroContenido: this.filtroContenido, emojisPermitidos: this.emojisPermitidos });
     const juego = new Juego({
       docenteId, cursoId: parametros.cursoId, estudianteId: parametros.estudianteId, generacionId: id,
       titulo, habilidad: parametros.habilidad, mecanica, origen: "ia"

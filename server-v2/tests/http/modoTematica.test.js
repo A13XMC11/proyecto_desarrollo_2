@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 
 // La generación se habilita ANTES de que buildApp lea el entorno. Valores de prueba con el generador falso.
 Object.assign(process.env, {
-  AI_ENABLED: "true", AI_PROVEEDOR: "falso", GENERADOR_FALSO_DEMORA_MS: "0", AI_MAX_DIARIAS: "3", AI_MAX_SIMULTANEAS: "1",
+  AI_ENABLED: "true", AI_PROVEEDOR: "falso", GENERADOR_FALSO_DEMORA_MS: "0", GENERACION_LIBRE_HABILITADA: "false", AI_MAX_DIARIAS: "3", AI_MAX_SIMULTANEAS: "1",
   AI_TIEMPO_LIMITE_MS: "5000", AI_MARGEN_CONCILIACION_MS: "1000", AI_PRESUPUESTO_MENSUAL: "1000000",
   AI_COSTO_MAXIMO_LLAMADA: "1", AI_TARIFA_ENTRADA_MTOK: "1", AI_TARIFA_SALIDA_MTOK: "2"
 });
@@ -71,12 +71,12 @@ describe("HTTP: modo de temática y compatibilidad (paso 3)", () => {
     }
   });
 
-  prueba("la temática libre todavía no está disponible por HTTP: se rechaza sin guardar nada ni gastar cupo", async () => {
+  prueba("con el interruptor de la temática libre apagado (por defecto) se rechaza (503) sin guardar nada ni gastar cupo", async () => {
     const { docente, curso } = await escenario();
     const libre = { cursoId: curso, habilidad: "vocales", modoTematica: "libre", tematica: "sonidos de animales", cantidad: 5 };
     const r = await llamar("/api/generaciones", { metodo: "POST", docente, cuerpo: libre, cabeceras: { "idempotency-key": "clave-modo-libre-000001" } });
-    assert.equal(r.status, 400, JSON.stringify(r.cuerpo));
-    assert.equal(r.cuerpo.codigo, "TEMATICA_LIBRE_NO_DISPONIBLE");
+    assert.equal(r.status, 503, JSON.stringify(r.cuerpo));
+    assert.equal(r.cuerpo.codigo, "GENERACION_LIBRE_DESHABILITADA");
     assert.deepEqual((await llamar("/api/generaciones", { docente })).cuerpo, []);
     const cuotas = (await llamar("/api/cuotas", { docente })).cuerpo;
     assert.equal((cuotas.diaria?.consumido || 0) + (cuotas.diaria?.reservado || 0), 0);

@@ -87,4 +87,19 @@ describe("leerConfiguracionGeneracion (entorno)", () => {
   it("un valor que no es número se rechaza", () => {
     assert.throws(() => leer({ AI_MAX_DIARIAS: "tres" }), EntradaInvalida);
   });
+
+  it("la temática libre viene APAGADA por defecto, aun con la generación encendida", () => {
+    assert.equal(new ConfiguracionGeneracion().libreHabilitada, false);
+    assert.equal(new ConfiguracionGeneracion(completa).libreHabilitada, false);
+    assert.equal(leer({}).libreHabilitada, false);
+  });
+
+  it("GENERACION_LIBRE_HABILITADA solo la enciende con el valor exacto true", () => {
+    assert.equal(leer({ GENERACION_LIBRE_HABILITADA: "true" }).libreHabilitada, true);
+    for (const valor of ["false", "", "1", "TRUE", "si", " true"]) assert.equal(leer({ GENERACION_LIBRE_HABILITADA: valor }).libreHabilitada, false, valor);
+  });
+
+  it("libreHabilitada debe ser un booleano", () => {
+    assert.throws(() => new ConfiguracionGeneracion({ libreHabilitada: "true" }), EntradaInvalida);
+  });
 });

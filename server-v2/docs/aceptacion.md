@@ -71,3 +71,29 @@ Criterios de cierre (plan §15b) y su evidencia:
 
 Recorrido en navegador: se generó «Completar la sílaba · Cuerpo humano · 10 ejercicios» con el generador falso; el editor mostró el icono, el selector de sílaba y las opciones, y la vista previa el icono, la palabra con hueco y tres sílabas. Sin errores ni avisos en la consola.
 **No se probó** con la IA real (sigue sin habilitar), en teléfonos o tabletas, ni la pantalla de resultados con las habilidades nuevas (usa los mismos indicadores por partida, pero no se revisó a mano).
+
+## 6. Sprint 8 — temática libre (rama `feature/generacion-libre`)
+
+El docente puede pedir actividades sobre cualquier temática (frutas, colores, sonidos de animales, medios de transporte…) además de las 5 del catálogo. **Apagada por defecto**
+(`GENERACION_LIBRE_HABILITADA`). Esto **amplía el SRS** (RNF-011 y la restricción del catálogo local revisado, §2.5 y §5.4) y **debe validarse con el docente de la asignatura**.
+
+Estado a la fecha de este paso (7 de 10): el servidor está conectado de punta a punta con el generador falso; **falta** el cliente (paso 8), las mecánicas de sonido y colores como paso aparte
+(paso 9 — ya decidido que son temáticas libres de las habilidades existentes) y la medición con la IA real (paso 10).
+
+| # | Criterio | Estado | Evidencia |
+|---|---|---|---|
+| 1 | Solicitar → borrador → aprobar → partida → intentos → finalizar → resultados, para las 4 habilidades, con 5 y 10 ejercicios | **Cumplido con el generador falso** | `tests/http/generacionLibre.test.js` (frutas, colores y sonidos de animales) |
+| 2 | La IA nunca genera código ni decide qué es correcto; el servidor calcula la respuesta | **Cumplido** | `ValidacionContenidoLibre.test.js`, `GeneradorContenidoIALibre.test.js`; la vista del estudiante no revela respuestas (`generacionLibre.test.js`) |
+| 3 | Una temática bloqueada se rechaza antes de gastar cupo ni llamar al generador | **Cumplido** | `GeneracionLibre.test.js`, `generacionLibre.test.js` (política, armas, drogas, letras separadas) |
+| 4 | Interruptor apagado por defecto; con la IA apagada manda GENERACION_DESHABILITADA | **Cumplido** | `GeneracionLibre.test.js`, `ConfiguracionGeneracion.test.js`, `modoTematica.test.js` |
+| 5 | Idempotencia con el modo incluido (otro modo = CLAVE_REUTILIZADA) | **Cumplido** | `GeneracionLibre.test.js`, `generacionLibre.test.js` |
+| 6 | Cada docente solo accede a lo suyo (ids ajenos = 404) | **Cumplido** | `generacionLibre.test.js` |
+| 7 | Un rechazo por contenido sigue consumiendo cupo y deja el error consultable sin repetir términos | **Cumplido** | `GeneracionLibre.test.js` |
+| 8 | Lo ya guardado (catálogo) se sigue abriendo y jugando | **Cumplido** | La suite anterior pasa sin cambios, salvo pruebas que fijaban el fail-closed del paso 5 y la lista de claves de la solicitud |
+| 9 | Resultados e inicio funcionan con versiones libres | **Cumplido** | `generacionLibre.test.js` («finalizar a mano, resultados e inicio…») |
+| 10 | La suite completa pasa y las capas siguen limpias | **Cumplido** | `npm test`: 967 de 967, 0 omitidas (con bases reales); `capas.test.js` 8 de 8; Dominio 404; cliente 19 de 19 |
+| 11 | Con la IA real: calidad de las palabras, descartes y costo reales | **Pendiente** | Paso 10 (medición real, comparando catálogo y libre) |
+| 12 | Cliente: alternador de modo, campo de temática y aviso de no escribir nombres de estudiantes | **Pendiente** | Paso 8 |
+| 13 | Validación de la ampliación del SRS con el docente de la asignatura | **Pendiente** | Responsable: el equipo |
+
+Qué **no** se probó: el recorrido en navegador (no hay pantalla todavía), la IA real, un docente humano revisando palabras e iconos, ni el filtro contra el uso adversarial (es una defensa parcial, ver C6).

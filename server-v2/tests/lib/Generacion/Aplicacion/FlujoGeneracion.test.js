@@ -112,7 +112,7 @@ describe("Flujo de generación: éxito, idempotencia y errores previos al provee
     let recibida;
     const c = montar(async (s) => { recibida = s; return conUso()(s); });
     await c.solicitar.ejecutar(esc.docenteId, clave(), datosDe(esc));
-    assert.deepEqual(Object.keys(recibida).sort(), ["cantidad", "franjaEdad", "habilidad", "instruccion", "mecanica", "recursos", "tematica"]);
+    assert.deepEqual(Object.keys(recibida).sort(), ["cantidad", "franjaEdad", "habilidad", "instruccion", "mecanica", "modoTematica", "recursos", "tematica"]);
     assert.equal(recibida.franjaEdad, 6);
     assert.ok(!JSON.stringify(recibida).includes(esc.docenteId) && !JSON.stringify(recibida).includes(esc.estudianteId));
   });

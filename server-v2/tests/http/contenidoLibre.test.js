@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 
 // La generación se habilita ANTES de que buildApp lea el entorno. Valores de prueba con el generador falso.
 Object.assign(process.env, {
-  AI_ENABLED: "true", AI_PROVEEDOR: "falso", GENERADOR_FALSO_DEMORA_MS: "0", AI_MAX_DIARIAS: "3", AI_MAX_SIMULTANEAS: "1",
+  AI_ENABLED: "true", AI_PROVEEDOR: "falso", GENERADOR_FALSO_DEMORA_MS: "0", GENERACION_LIBRE_HABILITADA: "false", AI_MAX_DIARIAS: "3", AI_MAX_SIMULTANEAS: "1",
   AI_TIEMPO_LIMITE_MS: "5000", AI_MARGEN_CONCILIACION_MS: "1000", AI_PRESUPUESTO_MENSUAL: "1000000",
   AI_COSTO_MAXIMO_LLAMADA: "1", AI_TARIFA_ENTRADA_MTOK: "1", AI_TARIFA_SALIDA_MTOK: "2"
 });
@@ -160,14 +160,14 @@ describe("HTTP: temática libre, de la aprobación a la partida (paso 4, datos f
     assert.equal((await llamar(`${rutaV}/${version}/aprobar`, { metodo: "POST", docente: esc.ajeno })).status, 404);
   });
 
-  prueba("la temática libre sigue inalcanzable desde la solicitud de generación", async () => {
+  prueba("con el interruptor apagado la temática libre no se alcanza desde la solicitud de generación", async () => {
     const esc = await escenario();
     const r = await llamar("/api/generaciones", {
       metodo: "POST", docente: esc.docente, cabeceras: { "idempotency-key": "clave-contenido-libre-01" },
       cuerpo: { cursoId: esc.curso, habilidad: "vocales", modoTematica: "libre", tematica: "frutas", cantidad: 5 }
     });
-    assert.equal(r.status, 400);
-    assert.equal(r.cuerpo.codigo, "TEMATICA_LIBRE_NO_DISPONIBLE");
+    assert.equal(r.status, 503);
+    assert.equal(r.cuerpo.codigo, "GENERACION_LIBRE_DESHABILITADA");
   });
 
   prueba("una versión del catálogo se valida y aprueba igual que antes", async () => {

@@ -17,6 +17,8 @@ const CanalRepositoryMongoose = require("../../../Canal/Infraestructura/CanalRep
 const JuegoRepositoryMongoose = require("../../../Juego/Infraestructura/JuegoRepositoryMongoose");
 const VersionRepositoryMongoose = require("../../../Juego/Infraestructura/VersionRepositoryMongoose");
 const CatalogoRecursosJson = require("../../../Juego/Infraestructura/CatalogoRecursosJson");
+const FiltroContenidoJson = require("../../../Juego/Infraestructura/FiltroContenidoJson");
+const EmojisPermitidosJson = require("../../../Juego/Infraestructura/EmojisPermitidosJson");
 
 const SolicitarGeneracion = require("../../Aplicacion/SolicitarGeneracion");
 const ProcesarGeneracion = require("../../Aplicacion/ProcesarGeneracion");
@@ -37,16 +39,17 @@ function leerDemoraFalsa(env) {
   return Number(texto.trim());
 }
 
-function crearGenerador(env = process.env) {
+// dependencias: { filtroContenido, emojisPermitidos }, que el generador necesita para la temática libre (el falso y el real)
+function crearGenerador(env = process.env, dependencias = {}) {
   const proveedor = env.AI_PROVEEDOR || "falso";
-  if (proveedor === "falso") return new GeneradorContenidoFalso({ demoraMs: leerDemoraFalsa(env) });
+  if (proveedor === "falso") return new GeneradorContenidoFalso({ demoraMs: leerDemoraFalsa(env), ...dependencias });
   if (proveedor === "gemini") {
     // Sin valores por defecto: el modelo y el tope de salida salen de la prueba del modelo (S4-06)
     const faltan = ["GEMINI_API_KEY", "GEMINI_MODELO", "AI_MAX_TOKENS_SALIDA"].filter((n) => !env[n] || !env[n].trim());
     if (faltan.length) throw new Error(`AI_PROVEEDOR=gemini requiere definir: ${faltan.join(", ")}`);
     const razonamiento = env.GEMINI_RAZONAMIENTO && env.GEMINI_RAZONAMIENTO.trim() ? Number(env.GEMINI_RAZONAMIENTO) : undefined;
     return new GeneradorContenidoIA({
-      apiKey: env.GEMINI_API_KEY.trim(), modelo: env.GEMINI_MODELO.trim(), maxTokensSalida: Number(env.AI_MAX_TOKENS_SALIDA), presupuestoRazonamiento: razonamiento
+      apiKey: env.GEMINI_API_KEY.trim(), modelo: env.GEMINI_MODELO.trim(), maxTokensSalida: Number(env.AI_MAX_TOKENS_SALIDA), presupuestoRazonamiento: razonamiento, ...dependencias
     });
   }
   throw new Error(`AI_PROVEEDOR "${proveedor}" no está disponible: use "falso" o "gemini"`);
@@ -64,8 +67,8 @@ function verificarCostoMaximo(config, generador) {
 
 // Arma los casos de uso con sus repositorios. Se exporta para que las pruebas usen el mismo cableado
 // con otra configuración o con un generador de pruebas.
-// filtroContenido (opcional) habilita la temática libre; registerGeneracionModule todavía no lo entrega (paso 7).
-function componer({ config, generador, filtroContenido }) {
+// filtroContenido y emojisPermitidos habilitan la temática libre (el interruptor GENERACION_LIBRE_HABILITADA la enciende).
+function componer({ config, generador, filtroContenido, emojisPermitidos }) {
   const repo = new GeneracionRepositorySequelize();
   const cuotaRepo = new CuotaRepositorySequelize();
   const estudianteRepo = new EstudianteRepositorySequelize();
@@ -77,7 +80,7 @@ function componer({ config, generador, filtroContenido }) {
   const reservarCupo = new ReservarCupoGeneracion(repo, cuotaRepo, config);
   const procesarGeneracion = new ProcesarGeneracion({
     generacionRepository: repo, juegoRepository: juegoRepo, versionRepository: versionRepo, estudianteRepository: estudianteRepo,
-    generador, catalogo: new CatalogoRecursosJson(), config,
+    generador, catalogo: new CatalogoRecursosJson(), config, filtroContenido, emojisPermitidos,
     registrarConsumo: new RegistrarConsumoGeneracion(repo, cuotaRepo, config), liberarReserva
   });
 
@@ -96,9 +99,12 @@ function componer({ config, generador, filtroContenido }) {
 
 function registerGeneracionModule(app) {
   const config = leerConfiguracionGeneracion();
-  const generador = crearGenerador();
+  // El filtro y la lista de iconos se cargan siempre y se validan al cargar: si no cargan, el servidor no arranca
+  const filtroContenido = new FiltroContenidoJson();
+  const emojisPermitidos = new EmojisPermitidosJson();
+  const generador = crearGenerador(process.env, { filtroContenido, emojisPermitidos });
   verificarCostoMaximo(config, generador);
-  const casos = componer({ config, generador });
+  const casos = componer({ config, generador, filtroContenido, emojisPermitidos });
 
   const generacionController = new GeneracionController({
     solicitarGeneracion: casos.solicitar,

@@ -17,11 +17,13 @@ const numero = (valor, campo, { exclusivoCero = false } = {}) => {
 // tras medir el modelo (S4-06 y S4-08): no hay valores por defecto que puedan costar dinero.
 class ConfiguracionGeneracion {
   constructor({
-    habilitada = false, maxDiarias = 3, maxSimultaneas = 1, permitirDiez = false, zonaHoraria = "America/Guayaquil",
+    habilitada = false, libreHabilitada = false, maxDiarias = 3, maxSimultaneas = 1, permitirDiez = false, zonaHoraria = "America/Guayaquil",
     tiempoLimiteMs, margenConciliacionMs, presupuestoMensual, costoMaximoLlamada, tarifaEntrada, tarifaSalida
   } = {}) {
-    if (typeof habilitada !== "boolean" || typeof permitirDiez !== "boolean") throw new EntradaInvalida("configuración de generación inválida");
+    if (typeof habilitada !== "boolean" || typeof libreHabilitada !== "boolean" || typeof permitirDiez !== "boolean") throw new EntradaInvalida("configuración de generación inválida");
     this.habilitada = habilitada;
+    // Interruptor propio de la temática libre (GENERACION_LIBRE_HABILITADA): apagado por defecto, aun con la IA encendida
+    this.libreHabilitada = libreHabilitada;
     this.permitirDiez = permitirDiez;
     this.maxDiarias = entero(maxDiarias, "maxDiarias", 1);
     this.maxSimultaneas = entero(maxSimultaneas, "maxSimultaneas", 1);

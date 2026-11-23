@@ -7,6 +7,8 @@ const numero = (env, nombre) => (env[nombre] === undefined || env[nombre].trim()
 function leerConfiguracionGeneracion(env = process.env) {
   return new ConfiguracionGeneracion({
     habilitada: env.AI_ENABLED === "true",
+    // La temática libre se enciende aparte y solo con el valor exacto "true"
+    libreHabilitada: env.GENERACION_LIBRE_HABILITADA === "true",
     // Desde el sprint 7 los 10 ejercicios están habilitados; PERMITIR_10_EJERCICIOS=false los apaga
     permitirDiez: env.PERMITIR_10_EJERCICIOS !== "false",
     maxDiarias: numero(env, "AI_MAX_DIARIAS") ?? 3,
