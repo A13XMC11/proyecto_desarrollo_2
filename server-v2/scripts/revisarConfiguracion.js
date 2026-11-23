@@ -84,6 +84,23 @@ function revisarEntorno(env) {
     registrar("error", "La configuración de generación con IA no es válida", error.message);
   }
 
+  // Temática libre: interruptor propio, apagado por defecto. Solo el valor exacto "true" la enciende (como el servidor).
+  const libre = env.GENERACION_LIBRE_HABILITADA;
+  if (libre === "true") {
+    if (env.AI_ENABLED !== "true") {
+      registrar("aviso", "Configuración incoherente: GENERACION_LIBRE_HABILITADA=true con AI_ENABLED apagado",
+        "no tendrá efecto: con la IA apagada toda generación responde GENERACION_DESHABILITADA; encienda AI_ENABLED o apague el interruptor");
+    } else {
+      registrar("aviso", "Temática libre HABILITADA",
+        "amplía el SRS (RNF-011, §2.5 y §5.4) y debe validarse con el docente de la asignatura (C8); el filtro de contenido es una defensa parcial (C6) y cada solicitud cuesta más que una de catálogo (docs/generacion-ia.md)");
+    }
+  } else {
+    if (!vacio(libre) && libre !== "false") {
+      registrar("aviso", "GENERACION_LIBRE_HABILITADA tiene un valor no reconocido", "solo el valor exacto true la enciende; cualquier otro la deja apagada. Use true o false");
+    }
+    registrar("ok", "Temática libre apagada (GENERACION_LIBRE_HABILITADA≠true)");
+  }
+
   return r;
 }
 

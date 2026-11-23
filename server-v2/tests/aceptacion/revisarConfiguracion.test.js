@@ -57,6 +57,53 @@ describe("revisarConfiguracion: entorno", () => {
   });
 });
 
+describe("revisarConfiguracion: temática libre (paso 9)", () => {
+  const ia = {
+    ...entornoBueno, AI_ENABLED: "true", AI_PROVEEDOR: "falso", AI_TIEMPO_LIMITE_MS: "30000", AI_MARGEN_CONCILIACION_MS: "60000",
+    AI_PRESUPUESTO_MENSUAL: "1", AI_COSTO_MAXIMO_LLAMADA: "0.01", AI_TARIFA_ENTRADA_MTOK: "0", AI_TARIFA_SALIDA_MTOK: "0"
+  };
+  const avisos = (r) => r.filter((x) => x.nivel === "aviso").map((x) => `${x.texto} ${x.detalle || ""}`);
+
+  it("apagada (por defecto o en false) no dice nada y no es un problema", () => {
+    for (const env of [ia, { ...ia, GENERACION_LIBRE_HABILITADA: "false" }, entornoBueno, { ...entornoBueno, GENERACION_LIBRE_HABILITADA: "false" }]) {
+      const r = revisarEntorno(env);
+      assert.deepEqual(errores(r), []);
+      assert.ok(!avisos(r).some((a) => /temática libre/i.test(a)), JSON.stringify(env.GENERACION_LIBRE_HABILITADA));
+      assert.ok(r.some((x) => x.nivel === "ok" && /temática libre apagada/i.test(x.texto)));
+    }
+  });
+
+  it("encendida con la IA encendida es un aviso que pide una decisión (SRS, filtro parcial y costo), no un error", () => {
+    const r = revisarEntorno({ ...ia, GENERACION_LIBRE_HABILITADA: "true" });
+    assert.deepEqual(errores(r), []);
+    const aviso = avisos(r).find((a) => /temática libre HABILITADA/i.test(a));
+    assert.ok(aviso, "debe avisar");
+    for (const parte of [/SRS|profesor|docente de la asignatura/i, /filtro/i, /costo|cuesta/i]) assert.match(aviso, parte);
+  });
+
+  it("encendida con la IA apagada es incoherente: avisa que no tendrá efecto", () => {
+    const r = revisarEntorno({ ...entornoBueno, GENERACION_LIBRE_HABILITADA: "true" });
+    const aviso = avisos(r).find((a) => /incoherente/i.test(a));
+    assert.ok(aviso, "debe avisar de la incoherencia");
+    assert.match(aviso, /AI_ENABLED/);
+    assert.ok(!avisos(r).some((a) => /temática libre HABILITADA/i.test(a)), "no la da por habilitada si la IA está apagada");
+  });
+
+  it("un valor que el servidor no reconoce (solo vale el exacto true) se señala porque dejaría la opción apagada sin querer", () => {
+    for (const valor of ["TRUE", "1", "si", " true", "yes"]) {
+      const aviso = avisos(revisarEntorno({ ...ia, GENERACION_LIBRE_HABILITADA: valor })).find((a) => /GENERACION_LIBRE_HABILITADA/.test(a) && /valor/i.test(a));
+      assert.ok(aviso, `«${valor}» debería señalarse`);
+      assert.match(aviso, /true|false/);
+    }
+  });
+
+  it("vacía o sin definir no se señala", () => {
+    for (const valor of [undefined, "", "false", "true"]) {
+      assert.ok(!avisos(revisarEntorno({ ...ia, GENERACION_LIBRE_HABILITADA: valor })).some((a) => /no reconocido|valor no/i.test(a)), String(valor));
+    }
+  });
+});
+
 describe("revisarConfiguracion: repositorio", () => {
   const repoTemporal = (archivos) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "revision-"));
