@@ -321,6 +321,39 @@ o 3, se puede pedir `cantidad + 3` en lugar del doble.
 docente. Pedir el doble no garantiza llegar a la cantidad con temáticas muy estrechas. El filtro de contenido es una defensa parcial; la aprobación del docente es la
 garantía real.
 
+### Temática libre: el generador falso (rama `feature/generacion-libre`, paso 6)
+
+El generador falso tiene ahora una rama libre para probar todo el flujo sin proveedor, sin red y sin costo. **No entiende la temática**: es contenido de ejemplo.
+
+- **Mismo camino que la IA.** Propone candidatas con la misma forma (`{ palabra, icono?, consigna, pista? }`), **en la misma cantidad** (el doble de la pedida, con tope de 20) y las
+  entrega al MISMO selector (`seleccionarEjerciciosLibres`), que calcula sílabas, opciones y respuestas y valida con la MISMA regla de aprobación. Una prueba comprueba que el falso y
+  el generador con IA, alimentados con las mismas candidatas, producen exactamente los mismos ejercicios. Para quedarse solo con palabras que sirven a la habilidad (por ejemplo, con
+  inicial vocal en `vocales`) usa `evaluarPalabra`, no reglas propias.
+- **Diccionario de ejemplo** en `src/lib/Generacion/Infraestructura/falso/contenidoFalsoLibre.json`: frutas, colores, animales (nombres, no sonidos), transporte, escuela, cuerpo humano
+  y comida, más un conjunto genérico. Cada palabra pasa el filtro de contenido y cada icono está en la lista permitida (lo comprueban las pruebas); algunas no llevan icono a propósito,
+  y los colores no llevan ninguno. Se reconoce la temática por un alias del archivo que coincida con el texto o con alguna de sus palabras (`frutas tropicales` → frutas; `sonidos de animales`
+  → animales; `medios de transporte` → transporte).
+- **Temática desconocida.** Cualquier otro texto usa el conjunto genérico y el título lleva la marca `(contenido de ejemplo)` (recortando la temática si hiciera falta para no pasar de 80
+  caracteres). Es determinista: misma entrada, misma salida; el orden del archivo fija qué palabras salen primero.
+- **Sin dependencias, no genera.** Como el generador real, la temática libre exige el filtro y la lista de iconos y falla antes de producir nada si faltan (se entregan en el paso 7).
+- **El modo catálogo del falso no cambió**: sus pruebas existentes no se modificaron.
+
+**Capacidad: palabras que sirven por temática y habilidad** (cada una alcanza para 10 ejercicios sin duplicados; con 5 sobra margen):
+
+| Temática | Palabras | vocales | palabras_silabas | completar_silaba | contar_silabas |
+|---|---|---|---|---|---|
+| frutas | 29 | 11 | 21 | 28 | 28 |
+| colores | 28 | 12 | 25 | 26 | 26 |
+| animales | 28 | 14 | 25 | 28 | 28 |
+| transporte | 20 | **10** | 14 | 20 | 20 |
+| escuela | 20 | 12 | 16 | 18 | 18 |
+| cuerpo | 22 | 12 | 18 | 22 | 22 |
+| comida | 22 | **10** | 18 | 22 | 22 |
+| genérico (desconocida) | 23 | 12 | 22 | 23 | 23 |
+
+Las celdas en negrita alcanzan justo para 10 ejercicios de vocales (no sobra ninguna). Las palabras que no servían a ninguna habilidad se quitaron del diccionario; si una combinación no
+alcanzara, el falso fallaría con `GENERADOR_CANDIDATAS_INSUFICIENTES` en lugar de inventar palabras.
+
 ## 4. Ejemplos
 
 ### Respuestas válidas

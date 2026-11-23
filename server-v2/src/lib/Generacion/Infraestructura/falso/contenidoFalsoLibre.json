@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "descripcion": "Contenido de ejemplo del generador falso para la temática libre. NO lo usa la IA ni el catálogo: sirve para probar el flujo completo sin proveedor, sin red y sin costo.",
+    "limite": "El generador falso no entiende la temática: reconoce las de este archivo por su nombre (o alguna palabra suya) y, para cualquier otro texto, devuelve el conjunto genérico marcado como contenido de ejemplo.",
+    "comoEditar": "Cada palabra es { palabra, icono? }. El icono es opcional y, si está, debe estar en emojis/emojisPermitidos.json. Las pruebas comprueban que cada palabra pase el filtro y la lista de iconos, y calculan cuántas sirven para cada habilidad. Los colores no llevan icono: ningún emoji de color está permitido.",
+    "orden": "El orden es el del archivo y fija qué palabras salen primero: la misma entrada da siempre la misma salida."
+  },
+  "tematicas": {
+    "frutas": {
+      "alias": ["fruta","frutas"],
+      "palabras": [
+        { "palabra": "uva", "icono": "🍇" }, { "palabra": "papaya" }, { "palabra": "manzana", "icono": "🍎" },
+        { "palabra": "guayaba" }, { "palabra": "naranja", "icono": "🍊" }, { "palabra": "mora" },
+        { "palabra": "plátano", "icono": "🍌" }, { "palabra": "anona" }, { "palabra": "pera", "icono": "🍐" },
+        { "palabra": "aceituna" }, { "palabra": "melón", "icono": "🍈" }, { "palabra": "arándano" },
+        { "palabra": "piña", "icono": "🍍" }, { "palabra": "albaricoque" }, { "palabra": "mango", "icono": "🥭" },
+        { "palabra": "uvilla" }, { "palabra": "limón", "icono": "🍋" }, { "palabra": "ananá" },
+        { "palabra": "cereza", "icono": "🍒" }, { "palabra": "oliva" }, { "palabra": "fresa", "icono": "🍓" },
+        { "palabra": "avellana" }, { "palabra": "aguacate", "icono": "🥑" }, { "palabra": "almendra" },
+        { "palabra": "mandarina" }, { "palabra": "toronja" }, { "palabra": "granadilla" },
+        { "palabra": "tamarindo" }, { "palabra": "higo" }
+      ]
+    },
+    "colores": {
+      "alias": ["color","colores"],
+      "palabras": [
+        { "palabra": "rojo" }, { "palabra": "azul" }, { "palabra": "verde" },
+        { "palabra": "amarillo" }, { "palabra": "naranja" }, { "palabra": "morado" },
+        { "palabra": "rosado" }, { "palabra": "negro" }, { "palabra": "blanco" },
+        { "palabra": "celeste" }, { "palabra": "marrón" }, { "palabra": "dorado" },
+        { "palabra": "violeta" }, { "palabra": "turquesa" }, { "palabra": "anaranjado" },
+        { "palabra": "ocre" }, { "palabra": "añil" }, { "palabra": "ámbar" },
+        { "palabra": "índigo" }, { "palabra": "aguamarina" }, { "palabra": "oro" },
+        { "palabra": "oliva" }, { "palabra": "arena" }, { "palabra": "uva" },
+        { "palabra": "grana" }, { "palabra": "lila" }, { "palabra": "fucsia" },
+        { "palabra": "cobre" }
+      ]
+    },
+    "animales": {
+      "alias": ["animal","animales"],
+      "palabras": [
+        { "palabra": "abeja", "icono": "🐝" }, { "palabra": "araña" }, { "palabra": "elefante", "icono": "🐘" },
+        { "palabra": "avestruz" }, { "palabra": "iguana", "icono": "🦎" }, { "palabra": "urraca" },
+        { "palabra": "oso", "icono": "🐻" }, { "palabra": "alpaca" }, { "palabra": "águila", "icono": "🦅" },
+        { "palabra": "armadillo" }, { "palabra": "ardilla", "icono": "🐿️" }, { "palabra": "enano" },
+        { "palabra": "erizo", "icono": "🦔" }, { "palabra": "oveja", "icono": "🐑" }, { "palabra": "gato", "icono": "🐱" },
+        { "palabra": "perro", "icono": "🐶" }, { "palabra": "pato", "icono": "🦆" }, { "palabra": "mono", "icono": "🐵" },
+        { "palabra": "conejo", "icono": "🐰" }, { "palabra": "tortuga", "icono": "🐢" }, { "palabra": "mariposa", "icono": "🦋" },
+        { "palabra": "caballo", "icono": "🐴" }, { "palabra": "ballena", "icono": "🐳" }, { "palabra": "gallina", "icono": "🐔" },
+        { "palabra": "delfín", "icono": "🐬" }, { "palabra": "jirafa", "icono": "🦒" }, { "palabra": "cebra", "icono": "🦓" },
+        { "palabra": "pulpo", "icono": "🐙" }
+      ]
+    },
+    "transporte": {
+      "alias": ["transporte","transportes","vehiculo","vehiculos"],
+      "palabras": [
+        { "palabra": "auto", "icono": "🚗" }, { "palabra": "avioneta" }, { "palabra": "avión", "icono": "✈️" },
+        { "palabra": "elevador" }, { "palabra": "autobús", "icono": "🚌" }, { "palabra": "escúter" },
+        { "palabra": "carro", "icono": "🚗" }, { "palabra": "ómnibus" }, { "palabra": "bicicleta", "icono": "🚲" },
+        { "palabra": "automóvil" }, { "palabra": "moto", "icono": "🏍️" }, { "palabra": "ambulancia" },
+        { "palabra": "barco", "icono": "🚢" }, { "palabra": "ancla" }, { "palabra": "camión", "icono": "🚚" },
+        { "palabra": "lancha" }, { "palabra": "taxi", "icono": "🚕" }, { "palabra": "patineta" },
+        { "palabra": "cohete", "icono": "🚀" }, { "palabra": "tractor", "icono": "🚜" }
+      ]
+    },
+    "escuela": {
+      "alias": ["escuela","escolar","colegio","clase"],
+      "palabras": [
+        { "palabra": "escuela", "icono": "🏫" }, { "palabra": "aula" }, { "palabra": "lápiz", "icono": "✏️" },
+        { "palabra": "alumno" }, { "palabra": "libro", "icono": "📕" }, { "palabra": "agenda" },
+        { "palabra": "cuaderno", "icono": "📓" }, { "palabra": "atlas" }, { "palabra": "mochila", "icono": "🎒" },
+        { "palabra": "estuche" }, { "palabra": "regla", "icono": "📏" }, { "palabra": "escritorio" },
+        { "palabra": "tijera", "icono": "✂️" }, { "palabra": "uniforme" }, { "palabra": "útiles" },
+        { "palabra": "examen" }, { "palabra": "abecedario" }, { "palabra": "álbum" },
+        { "palabra": "pizarra" }, { "palabra": "pupitre" }
+      ]
+    },
+    "cuerpo": {
+      "alias": ["cuerpo","cuerpo humano"],
+      "palabras": [
+        { "palabra": "ojo", "icono": "👁️" }, { "palabra": "uña" }, { "palabra": "oreja", "icono": "👂" },
+        { "palabra": "ombligo" }, { "palabra": "mano", "icono": "✋" }, { "palabra": "espalda" },
+        { "palabra": "nariz", "icono": "👃" }, { "palabra": "axila" }, { "palabra": "boca", "icono": "👄" },
+        { "palabra": "antebrazo" }, { "palabra": "diente", "icono": "🦷" }, { "palabra": "estómago" },
+        { "palabra": "lengua", "icono": "👅" }, { "palabra": "esternón" }, { "palabra": "espinilla" },
+        { "palabra": "omóplato" }, { "palabra": "índice" }, { "palabra": "cabeza" },
+        { "palabra": "brazo" }, { "palabra": "pierna" }, { "palabra": "dedo" },
+        { "palabra": "rodilla" }
+      ]
+    },
+    "comida": {
+      "alias": ["comida","comidas","alimento","alimentos"],
+      "palabras": [
+        { "palabra": "queso", "icono": "🧀" }, { "palabra": "aceite" }, { "palabra": "leche", "icono": "🥛" },
+        { "palabra": "avena" }, { "palabra": "papa", "icono": "🥔" }, { "palabra": "arroz" },
+        { "palabra": "pollo", "icono": "🍗" }, { "palabra": "ensalada" }, { "palabra": "galleta", "icono": "🍪" },
+        { "palabra": "empanada" }, { "palabra": "helado", "icono": "🍦" }, { "palabra": "almuerzo" },
+        { "palabra": "albóndiga" }, { "palabra": "elote" }, { "palabra": "agua" },
+        { "palabra": "ají" }, { "palabra": "sopa" }, { "palabra": "yuca" },
+        { "palabra": "pescado" }, { "palabra": "tamal" }, { "palabra": "tortilla" },
+        { "palabra": "mermelada" }
+      ]
+    }
+  },
+  "generico": {
+    "palabras": [
+      { "palabra": "oso", "icono": "🐻" }, { "palabra": "ola" }, { "palabra": "uva", "icono": "🍇" },
+      { "palabra": "uña" }, { "palabra": "abeja", "icono": "🐝" }, { "palabra": "isla" },
+      { "palabra": "elefante", "icono": "🐘" }, { "palabra": "escoba" }, { "palabra": "oreja", "icono": "👂" },
+      { "palabra": "anillo" }, { "palabra": "ojo", "icono": "👁️" }, { "palabra": "mesa" },
+      { "palabra": "avión", "icono": "✈️" }, { "palabra": "silla" }, { "palabra": "casa", "icono": "🏠" },
+      { "palabra": "muñeca" }, { "palabra": "luna", "icono": "🌙" }, { "palabra": "cuchara" },
+      { "palabra": "pelota", "icono": "⚽" }, { "palabra": "ventana" }, { "palabra": "globo", "icono": "🎈" },
+      { "palabra": "botella" }, { "palabra": "mano", "icono": "✋" }
+    ]
+  }
+}
