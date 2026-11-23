@@ -27,6 +27,9 @@ const ActualizarVersion = require("../../Aplicacion/ActualizarVersion");
 const AprobarVersion = require("../../Aplicacion/AprobarVersion");
 const DescartarVersion = require("../../Aplicacion/DescartarVersion");
 const ListarRecursos = require("../../Aplicacion/ListarRecursos");
+const ListarIconos = require("../../Aplicacion/ListarIconos");
+const IconoController = require("./IconoController");
+const IconoRoutes = require("./IconoRoutes");
 
 module.exports = function registerJuegoModule(app) {
   const repo = new JuegoRepositoryMongoose();
@@ -62,6 +65,7 @@ module.exports = function registerJuegoModule(app) {
   const recursoController = new RecursoController({ listarRecursos: new ListarRecursos(catalogo) });
 
   app.use("/api/recursos", RecursoRoutes(recursoController));
+  app.use("/api/iconos", IconoRoutes(new IconoController({ listarIconos: new ListarIconos(validacion.emojisPermitidos) })));
   app.use("/api/juegos/:juegoId/versiones", VersionRoutes(versionController));
   app.use("/api/juegos", JuegoRoutes(juegoController));
 };

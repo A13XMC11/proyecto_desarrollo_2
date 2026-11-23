@@ -25,8 +25,10 @@ class EmojisPermitidosJson {
     }
 
     this.permitidos = new Map();
+    this.agrupados = [];
     for (const categoria of IEmojisPermitidos.CATEGORIAS) {
       const emojis = datos.categorias[categoria];
+      this.agrupados.push({ clave: categoria, iconos: emojis });
       if (!Array.isArray(emojis)) throw new EntradaInvalida(`emojis permitidos: ${categoria} debe ser una lista`);
       for (const emoji of emojis) {
         try {
@@ -44,6 +46,10 @@ class EmojisPermitidosJson {
         this.permitidos.set(clave, categoria);
       }
     }
+  }
+
+  categorias() {
+    return this.agrupados.map(({ clave, iconos }) => ({ clave, iconos: [...iconos] }));
   }
 
   esPermitido(emoji) {

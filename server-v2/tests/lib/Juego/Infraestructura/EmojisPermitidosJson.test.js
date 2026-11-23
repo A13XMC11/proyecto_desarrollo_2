@@ -107,4 +107,24 @@ describe("EmojisPermitidosJson (adaptador del puerto IEmojisPermitidos)", () => 
     assert.throws(con({ ...base, animales: ["🐶"], frutas: ["🐶"] }), EntradaInvalida, "repetido entre categorías");
     assert.throws(con({ ...base, animales: ["🐶", "🐶"] }), EntradaInvalida, "repetido en la categoría");
   });
+
+  it("categorias() entrega la lista agrupada, en el orden de la revisión, para que el cliente deje elegir un icono", () => {
+    const grupos = lista.categorias();
+    assert.deepEqual(grupos.map((g) => g.clave), IEmojisPermitidos.CATEGORIAS);
+    for (const { iconos } of grupos) {
+      assert.ok(iconos.length > 0);
+      assert.ok(iconos.every((icono) => lista.esPermitido(icono)));
+    }
+    const todos = grupos.flatMap((g) => g.iconos);
+    assert.equal(new Set(todos).size, todos.length, "sin repetidos");
+    assert.ok(todos.includes("🍎") && !todos.includes("🔪"));
+  });
+
+  it("categorias() no deja modificar la lista por dentro", () => {
+    const grupos = lista.categorias();
+    grupos[0].iconos.push("🔪");
+    grupos.pop();
+    assert.equal(lista.esPermitido("🔪"), false);
+    assert.equal(lista.categorias().length, IEmojisPermitidos.CATEGORIAS.length);
+  });
 });

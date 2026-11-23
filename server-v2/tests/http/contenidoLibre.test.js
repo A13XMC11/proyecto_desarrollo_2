@@ -190,6 +190,16 @@ describe("HTTP: temática libre, de la aprobación a la partida (paso 4, datos f
     assert.ok(juego);
   });
 
+  prueba("GET /api/iconos entrega la lista cerrada agrupada, solo a un docente con sesión", async () => {
+    const esc = await escenario();
+    const r = await llamar("/api/iconos", { docente: esc.docente });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.cuerpo.categorias.map((g) => g.clave), ["animales", "frutas", "verduras", "objetos", "naturaleza", "cuerpo", "escuela", "comida", "transporte", "juguetes"]);
+    const todos = r.cuerpo.categorias.flatMap((g) => g.iconos);
+    assert.ok(todos.length > 300 && todos.includes("🍎") && !todos.includes("🔪"));
+    assert.equal((await llamar("/api/iconos")).status, 401);
+  });
+
   prueba("la lista de actividades indica cuáles son de temática libre", async () => {
     const esc = await escenario();
     const libre = await juegoConBorradorLibre(esc, "vocales", "frutas");
