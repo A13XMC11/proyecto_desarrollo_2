@@ -8,6 +8,7 @@ import { Avatar } from "../../../Aula/Infraestructura/ui/Avatar";
 import { AulaApiHttp } from "../../../Aula/Infraestructura/AulaApiHttp";
 import { JuegoApiHttp } from "../../../Juego/Infraestructura/JuegoApiHttp";
 import { PartidaApiHttp } from "../PartidaApiHttp";
+import { indexarEnCurso } from "../../Dominio/PartidasEnCurso";
 import { GamePlayer } from "./GamePlayer";
 
 // Canal según el dispositivo: pantalla táctil grande = tableta
@@ -37,7 +38,7 @@ const ElegirEstudiante = ({ juego, alElegir, iniciando }) => {
     ]);
     return {
       estudiantes: juego.estudianteId ? estudiantes.filter((e) => e.id === juego.estudianteId) : estudiantes,
-      enCurso: new Set(enCurso.filter((p) => p.juegoId === juego.id).map((p) => p.estudianteId))
+      enCurso: indexarEnCurso(enCurso, juego.id)
     };
   }, [juego.id]);
 
@@ -60,7 +61,7 @@ const ElegirEstudiante = ({ juego, alElegir, iniciando }) => {
                 <button
                   type="button"
                   disabled={Boolean(iniciando)}
-                  onClick={() => alElegir(e)}
+                  onClick={() => alElegir(e, enCurso.get(e.id))}
                   className="flex w-full cursor-pointer flex-col items-center gap-3 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-marca-100 transition-[scale] duration-150 ease-[var(--ease-salida)] hover:shadow-lg active:scale-[0.97] disabled:opacity-60"
                 >
                   <Avatar id={e.avatarId} tamano="size-16" />
@@ -88,8 +89,14 @@ export const PaginaAula = () => {
 
   const salir = () => navegar(juegoId ? `/panel/actividades/${juegoId}` : "/panel");
 
-  // Si ya hay una partida en curso de ese estudiante en este juego, se reanuda en lugar de duplicarla
-  const elegir = async (estudiante) => {
+  // Si ya hay una partida en curso de ese estudiante en este juego, se reanuda en lugar de duplicarla.
+  // Si la pantalla ya la conoce se abre directo (sin pedir una nueva que el servidor rechazaría con 409).
+  const elegir = async (estudiante, partidaEnCurso) => {
+    if (partidaEnCurso) {
+      setError(null);
+      setPartidaId(partidaEnCurso);
+      return;
+    }
     setIniciando(estudiante.id);
     setError(null);
     try {

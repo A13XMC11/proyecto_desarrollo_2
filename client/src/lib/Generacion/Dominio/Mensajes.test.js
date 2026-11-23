@@ -82,3 +82,17 @@ describe("MOTIVOS_GENERACION (por qué falló una generación guardada)", () => 
     assert.equal(mensajeDeError(error("GENERADOR_CANDIDATAS_INSUFICIENTES")), MOTIVOS_GENERACION.GENERADOR_CANDIDATAS_INSUFICIENTES);
   });
 });
+
+describe("mensajeDeError: el servidor rechaza un campo obligatorio vacío (ENTRADA_INVALIDA)", () => {
+  it("«consigna requerido» se convierte en una frase clara que nombra el campo y dice qué hacer", () => {
+    const texto = mensajeDeError(error("ENTRADA_INVALIDA", "consigna requerido"));
+    assert.notEqual(texto, "consigna requerido");
+    assert.match(texto, /consigna/i);
+    assert.match(texto, /escribe|completa/i);
+  });
+
+  it("nombra otros campos con el mismo patrón y conserva los mensajes que no lo siguen", () => {
+    assert.match(mensajeDeError(error("ENTRADA_INVALIDA", "titulo requerido")), /título/i);
+    assert.equal(mensajeDeError(error("ENTRADA_INVALIDA", "El título debe tener entre 3 y 80 caracteres")), "El título debe tener entre 3 y 80 caracteres");
+  });
+});
