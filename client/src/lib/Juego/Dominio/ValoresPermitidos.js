@@ -56,6 +56,7 @@ export const MOTIVOS_GENERACION = {
   GENERACION_DESHABILITADA: "La creación con IA todavía no está habilitada. Puedes crear la actividad a mano.",
   GENERACION_LIBRE_DESHABILITADA: "La opción «Otra temática» todavía no está habilitada. Elige una temática del catálogo.",
   TEMATICA_NO_PERMITIDA: "Esa temática no es adecuada para esta actividad. Prueba con otra, por ejemplo frutas, colores o medios de transporte.",
+  INSTRUCCION_NO_PERMITIDA: "Tu instrucción para la IA contiene algo que no es adecuado para actividades con niños. Escríbela de otra forma o bórrala.",
   CLAVE_REUTILIZADA: "Esta solicitud ya se había enviado con otros datos. Vuelve a pedirla desde cero.",
   GENERACION_EN_CURSO: "Ya tienes otra actividad generándose. Espera a que termine.",
   CUPO_DIARIO_AGOTADO: "Ya usaste todas las actividades con IA de hoy. Mañana tendrás más.",

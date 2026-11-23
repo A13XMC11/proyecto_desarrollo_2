@@ -145,6 +145,30 @@ describe("Generación libre: interruptor y filtro antes de reservar cupo", () =>
   });
 });
 
+describe("Generación: filtro de la instrucción antes de reservar cupo (paso 9)", () => {
+  prueba("una instrucción bloqueada se rechaza (400) sin guardar, reservar ni llamar al generador, en los dos modos", async () => {
+    const esc = await escenario();
+    const { c, generador } = montar();
+    for (const extra of [{ instruccion: "Quiero que hable de armas y violencia" }, { modoTematica: "catalogo", tematica: "animales", instruccion: "con p u t a" }]) {
+      await assert.rejects(c.solicitar.ejecutar(esc.docenteId, clave(), libre(esc, extra)),
+        (e) => e.statusCode === 400 && e.codigo === "INSTRUCCION_NO_PERMITIDA" && !/arma|violencia|puta/i.test(e.message), JSON.stringify(extra));
+    }
+    assert.deepEqual(await c.repo.findByDocente(esc.docenteId), []);
+    assert.equal(await usado(c, esc.docenteId), 0);
+    assert.equal(generador.llamadas, 0);
+  });
+
+  prueba("las instrucciones normales llegan al generador tal cual", async () => {
+    const esc = await escenario();
+    const { c, generador } = montar();
+    for (const instruccion of ["Practicar especialmente A y E", "usar palabras cortas", "Que sean animales de la granja"]) {
+      const { generacion } = await c.solicitar.ejecutar(esc.docenteId, clave(), libre(esc, { instruccion }));
+      assert.equal(generacion.estado, "completada", instruccion);
+    }
+    assert.deepEqual(generador.solicitudes.map((s) => s.instruccion), ["Practicar especialmente A y E", "usar palabras cortas", "Que sean animales de la granja"]);
+  });
+});
+
 describe("Generación libre: idempotencia y límites", () => {
   prueba("misma clave y mismos datos = la misma generación; otro modo con la misma clave es CLAVE_REUTILIZADA", async () => {
     const esc = await escenario();

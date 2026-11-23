@@ -187,6 +187,23 @@ describe("HTTP: temática libre de punta a punta con el generador falso", () => 
     assert.equal(await cuotaUsada(esc.docente), 1);
   });
 
+  prueba("una instrucción bloqueada se rechaza (400) sin gastar cupo y sin repetirla; las normales pasan", async () => {
+    const esc = await escenario();
+    for (const instruccion of ["Quiero que hable de armas y violencia", "con p u t a", "Practicar con drogas"]) {
+      for (const extra of [{}, { modoTematica: "catalogo", tematica: "animales" }]) {
+        const r = await solicitar(esc, { instruccion, ...extra });
+        assert.equal(r.status, 400, instruccion);
+        assert.equal(r.cuerpo.codigo, "INSTRUCCION_NO_PERMITIDA", instruccion);
+        assert.ok(!/arma|violencia|puta|droga/i.test(JSON.stringify(r.cuerpo)), `no repite: ${JSON.stringify(r.cuerpo)}`);
+      }
+    }
+    assert.deepEqual((await llamar("/api/generaciones", { docente: esc.docente })).cuerpo, []);
+    assert.equal(await cuotaUsada(esc.docente), 0);
+    for (const instruccion of ["Practicar especialmente A y E", "usar palabras cortas", "Para un niño que le cuesta la O"]) {
+      assert.equal((await solicitar(esc, { instruccion })).status, 201, instruccion);
+    }
+  });
+
   prueba("idempotencia: misma clave y datos = la misma generación; cambiar el modo es CLAVE_REUTILIZADA", async () => {
     const esc = await escenario();
     const cabeceras = { "idempotency-key": clave() };

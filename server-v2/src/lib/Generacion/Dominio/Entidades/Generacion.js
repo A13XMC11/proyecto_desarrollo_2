@@ -23,6 +23,18 @@ function validarTematica({ id, modoTematica, tematica, filtroContenido }) {
   return texto;
 }
 
+// La instrucción opcional también viaja a la IA: una solicitud NUEVA debe pasar el mismo filtro que la temática. Una ya
+// guardada (con id) solo se lee. Sin filtro (modo catálogo en pruebas de la entidad) no hay qué comprobar; la temática
+// libre, en cambio, lo exige siempre (validarTematica). El mensaje no repite el texto ni dice qué término lo bloqueó.
+function validarInstruccion({ id, instruccion, filtroContenido }) {
+  const texto = textoPlano(instruccion, "instruccion", { max: 500 });
+  if (id || !texto || !filtroContenido || typeof filtroContenido.evaluar !== "function") return texto;
+  if (!filtroContenido.evaluar(texto).permitido) {
+    throw new EntradaInvalida("La instrucción contiene algo que no es adecuado para actividades con niños. Escríbela de otra forma.", "INSTRUCCION_NO_PERMITIDA");
+  }
+  return texto;
+}
+
 function noNegativo(valor, campo) {
   if (valor === undefined || valor === null) return undefined;
   if (typeof valor !== "number" || !Number.isFinite(valor) || valor < 0) {
@@ -64,7 +76,7 @@ class Generacion {
       modoTematica,
       tematica: validarTematica({ id, modoTematica, tematica: parametros.tematica, filtroContenido }),
       cantidad: enumerado(parametros.cantidad, CANTIDADES_EJERCICIOS, "cantidad"),
-      instruccion: textoPlano(parametros.instruccion, "instruccion", { max: 500 })
+      instruccion: validarInstruccion({ id, instruccion: parametros.instruccion, filtroContenido })
     };
     this.estado = enumerado(estado, ESTADOS_GENERACION, "estado");
     this.proveedor = proveedor;

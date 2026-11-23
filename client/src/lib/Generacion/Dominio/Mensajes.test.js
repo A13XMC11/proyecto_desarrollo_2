@@ -33,6 +33,13 @@ describe("mensajeDeError: códigos nuevos y existentes de la generación", () =>
     assert.match(texto, /no es adecuada/i);
   });
 
+  it("una instrucción bloqueada: mensaje fijo, sin repetir lo escrito ni lo del servidor", () => {
+    const texto = mensajeDeError(error("INSTRUCCION_NO_PERMITIDA", "contiene «violencia»"));
+    assert.ok(!/violencia/i.test(texto));
+    assert.match(texto, /instrucción/i);
+    assert.match(texto, /otra forma|cámbiala|bórrala/i);
+  });
+
   it("los rechazos de contenido al guardar tampoco repiten nada", () => {
     for (const codigo of ["PALABRA_NO_PERMITIDA", "TEXTO_NO_PERMITIDO"]) {
       const texto = mensajeDeError(error(codigo, "contiene «arma»"));

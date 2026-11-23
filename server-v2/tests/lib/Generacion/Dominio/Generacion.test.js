@@ -140,3 +140,35 @@ describe("Entidad Generacion: modo de temática (paso 3)", () => {
     assert.equal(new Generacion(libre("frutas")).mecanica, "seleccionar_opcion");
   });
 });
+
+describe("Entidad Generacion: filtro de la instrucción del docente (paso 9)", () => {
+  // Filtro falso del puerto: bloquea solo la palabra "armas" (el filtro real se prueba con sus propias pruebas)
+  const filtro = { evaluar: (texto) => (/armas/i.test(texto) ? { permitido: false, categoria: "armas" } : { permitido: true }) };
+  const { mecanica, ...base } = gen.parametros;
+  const con = (instruccion, extra = {}) => ({ ...gen, filtroContenido: filtro, parametros: { ...base, instruccion }, ...extra });
+
+  it("una instrucción bloqueada se rechaza con un código propio y sin repetir lo escrito", () => {
+    assert.throws(() => new Generacion(con("Practicar con armas")),
+      (e) => e instanceof EntradaInvalida && e.codigo === "INSTRUCCION_NO_PERMITIDA" && !/armas/i.test(e.message));
+  });
+
+  it("también en modo libre, antes que cualquier otra cosa de la solicitud", () => {
+    const libre = { ...con("Practicar con armas"), parametros: { ...base, modoTematica: "libre", tematica: "frutas", instruccion: "Practicar con armas" } };
+    assert.throws(() => new Generacion(libre), (e) => e.codigo === "INSTRUCCION_NO_PERMITIDA");
+  });
+
+  it("las instrucciones normales pasan, con o sin instrucción", () => {
+    for (const ok of ["Practicar especialmente A y E", "usar palabras cortas", "", undefined]) {
+      assert.doesNotThrow(() => new Generacion(con(ok)), String(ok));
+    }
+    assert.equal(new Generacion(con("usar palabras cortas")).parametros.instruccion, "usar palabras cortas");
+  });
+
+  it("una generación ya guardada (con id) no se vuelve a filtrar: se puede seguir leyendo", () => {
+    assert.doesNotThrow(() => new Generacion(con("Practicar con armas", { id: "g1" })));
+  });
+
+  it("sin filtro en modo catálogo no hay qué comprobar (solo la temática libre lo exige)", () => {
+    assert.doesNotThrow(() => new Generacion({ ...gen, parametros: { ...base, instruccion: "Practicar con armas" } }));
+  });
+});
