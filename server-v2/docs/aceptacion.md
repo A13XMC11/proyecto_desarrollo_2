@@ -134,6 +134,18 @@ la persona volvía al inicio de la página). Cada uno se **reprodujo con teclas 
 - **Herramientas automáticas de accesibilidad.**
 - **Otras habilidades en teclado.** Solo se recorrió contar sílabas con «frutas»; vocales, completar la sílaba y ordenar sílabas (otra mecánica, con su propio componente) se cubren con pruebas HTTP, no con recorrido manual.
 
+### Verificación final (23 nov, sobre `67ea258`)
+
+| Comprobación | Resultado |
+|---|---|
+| `AI_ENABLED=false PERMITIR_10_EJERCICIOS=true npm test` | **1018 de 1018**, 0 fallidas, 0 canceladas, **0 omitidas**; «Arquitectura: reglas de capas» en verde |
+| Cliente: `node --test "src/**/*.test.js"` y `npm run build` | 56 de 56; compila |
+| `npm run revisar:configuracion -- --solo-repositorio` | 5 correctas, 0 con error, 0 avisos (salida 0) |
+| Escaneo de los 24 commits de la rama contra `main` (líneas añadidas) | Sin claves de Google, `sk-`, URL de base de datos con clave, clave privada, `GEMINI_API_KEY` ni `SESSION_SECRET` con valor; ningún `.env`, `.pem` ni clave versionados; sin correos personales ni rutas locales en lo añadido |
+
+Hallazgo: `revisar:configuracion -- --solo-repositorio` **ya fallaba en `main`** (2 errores, salida 1) porque el escáner encontraba los datos de ejemplo de su propia prueba (una URL con clave de mentira y una cabecera de clave privada). Se corrigió en la prueba
+(`67ea258`: los ejemplos se arman en tiempo de ejecución y el texto probado es el mismo); el escáner no cambió. El historial anterior a la rama (`main`) conserva esas cadenas de ejemplo, que no son credenciales.
+
 ### Qué **no** se probó (resumen)
 
 La IA real; un docente humano revisando palabras e iconos; la temática libre en dispositivos reales; el recorrido en navegador de las otras habilidades y de colores o «sonidos de animales»; y el filtro contra el uso adversarial más allá de las 26 pruebas por API (es una defensa parcial, ver C6).
