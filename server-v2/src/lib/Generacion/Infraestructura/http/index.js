@@ -6,9 +6,10 @@ const CuotaController = require("./CuotaController");
 const GeneracionRepositorySequelize = require("../GeneracionRepositorySequelize");
 const CuotaRepositorySequelize = require("../CuotaRepositorySequelize");
 const leerConfiguracionGeneracion = require("../leerConfiguracionGeneracion");
-// Para cambiar de generador solo se modifica este archivo (GeneradorContenidoFalso <-> GeneradorContenidoIA)
+// Para cambiar de generador solo se modifica este archivo (GeneradorContenidoFalso, GeneradorContenidoOpenAI o GeneradorContenidoIA/Gemini)
 const GeneradorContenidoFalso = require("../GeneradorContenidoFalso");
 const GeneradorContenidoIA = require("../GeneradorContenidoIA");
+const GeneradorContenidoOpenAI = require("../GeneradorContenidoOpenAI");
 // Generacion valida el curso y el estudiante (PostgreSQL) y el canal (MongoDB) a través de sus repositorios,
 // y guarda el borrador en Juego (MongoDB) con su catálogo de recursos
 const CursoRepositorySequelize = require("../../../Aula/Infraestructura/CursoRepositorySequelize");
@@ -52,7 +53,16 @@ function crearGenerador(env = process.env, dependencias = {}) {
       apiKey: env.GEMINI_API_KEY.trim(), modelo: env.GEMINI_MODELO.trim(), maxTokensSalida: Number(env.AI_MAX_TOKENS_SALIDA), presupuestoRazonamiento: razonamiento, ...dependencias
     });
   }
-  throw new Error(`AI_PROVEEDOR "${proveedor}" no está disponible: use "falso" o "gemini"`);
+  if (proveedor === "openai") {
+    // Sin valores por defecto: el modelo y el tope de salida los fija quien activa el proveedor tras medir costo y calidad
+    const faltan = ["OPENAI_API_KEY", "OPENAI_MODELO", "AI_MAX_TOKENS_SALIDA"].filter((n) => !env[n] || !env[n].trim());
+    if (faltan.length) throw new Error(`AI_PROVEEDOR=openai requiere definir: ${faltan.join(", ")}`);
+    const razonamiento = env.OPENAI_RAZONAMIENTO && env.OPENAI_RAZONAMIENTO.trim() ? env.OPENAI_RAZONAMIENTO.trim() : undefined;
+    return new GeneradorContenidoOpenAI({
+      apiKey: env.OPENAI_API_KEY.trim(), modelo: env.OPENAI_MODELO.trim(), maxTokensSalida: Number(env.AI_MAX_TOKENS_SALIDA), esfuerzoRazonamiento: razonamiento, ...dependencias
+    });
+  }
+  throw new Error(`AI_PROVEEDOR "${proveedor}" no está disponible: use "falso", "openai" o "gemini"`);
 }
 
 // La reserva antes de cada llamada es costoMaximoLlamada: si el tope de salida solo ya cuesta más, el consumo

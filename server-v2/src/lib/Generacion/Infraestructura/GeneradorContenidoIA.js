@@ -53,19 +53,30 @@ class GeneradorContenidoIA {
   }
 
   async llamar({ sistema, usuario, esquema }, signal) {
+    return this.enviarJson(
+      `${this.urlBase}/v1beta/models/${encodeURIComponent(this.modelo)}:generateContent`,
+      { "x-goog-api-key": this.apiKey },
+      {
+        systemInstruction: { parts: [{ text: sistema }] },
+        contents: [{ role: "user", parts: [{ text: usuario }] }],
+        generationConfig: {
+          responseMimeType: "application/json", responseJsonSchema: esquema, maxOutputTokens: this.maxTokensSalida,
+          ...(this.presupuestoRazonamiento !== undefined && { thinkingConfig: { thinkingBudget: this.presupuestoRazonamiento } })
+        }
+      },
+      signal
+    );
+  }
+
+  // POST con cuerpo JSON y respuesta JSON, común a todos los proveedores. Los errores nunca incluyen la clave
+  // ni el cuerpo de la respuesta del proveedor.
+  async enviarJson(url, cabeceras, cuerpo, signal) {
     let http;
     try {
-      http = await this.fetchFn(`${this.urlBase}/v1beta/models/${encodeURIComponent(this.modelo)}:generateContent`, {
+      http = await this.fetchFn(url, {
         method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": this.apiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: sistema }] },
-          contents: [{ role: "user", parts: [{ text: usuario }] }],
-          generationConfig: {
-            responseMimeType: "application/json", responseJsonSchema: esquema, maxOutputTokens: this.maxTokensSalida,
-            ...(this.presupuestoRazonamiento !== undefined && { thinkingConfig: { thinkingBudget: this.presupuestoRazonamiento } })
-          }
-        }),
+        headers: { "content-type": "application/json", ...cabeceras },
+        body: JSON.stringify(cuerpo),
         signal
       });
     } catch (error) {
@@ -104,9 +115,15 @@ class GeneradorContenidoIA {
       throw new ErrorDelGenerador(`El proveedor de IA no terminó la respuesta (${candidato.finishReason})`, "GENERADOR_RESPUESTA_INCOMPLETA");
     }
     const texto = (candidato.content?.parts || []).filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("");
+    return this.interpretarTexto(texto, { lista, soloCampos });
+  }
+
+  // Del texto que devolvió el proveedor al objeto con la forma esperada. `normalizar` limpia el objeto ya leído
+  // (un proveedor puede, por ejemplo, rellenar con null los campos opcionales) antes de comprobar su forma.
+  interpretarTexto(texto, { lista = "ejercicios", soloCampos, normalizar = (x) => x } = {}) {
     let contenido;
     try {
-      contenido = JSON.parse(texto);
+      contenido = normalizar(JSON.parse(texto));
     } catch (error) {
       throw new ErrorDelGenerador("El proveedor de IA no devolvió un JSON válido", "GENERADOR_RESPUESTA_INVALIDA");
     }

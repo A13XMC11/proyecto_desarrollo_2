@@ -4,13 +4,21 @@
 //
 //   node --env-file=.env scripts/medirGeneracion.js --confirmo-costo [--por-caso=2] [--max-llamadas=12]
 //
-// Variables: GEMINI_API_KEY, GEMINI_MODELO, AI_MAX_TOKENS_SALIDA y, para estimar el costo,
-// AI_TARIFA_ENTRADA_MTOK y AI_TARIFA_SALIDA_MTOK. No guarda la clave ni la imprime.
+// Proveedor: AI_PROVEEDOR=openai (por defecto) o gemini. Variables: OPENAI_API_KEY, OPENAI_MODELO (o GEMINI_API_KEY,
+// GEMINI_MODELO), AI_MAX_TOKENS_SALIDA y, para estimar el costo, AI_TARIFA_ENTRADA_MTOK y AI_TARIFA_SALIDA_MTOK.
+// No guarda la clave ni la imprime.
 // Pasa cada respuesta por la misma validación pedagógica que usa el servidor (ProcesarGeneracion).
 const GeneradorContenidoIA = require("../src/lib/Generacion/Infraestructura/GeneradorContenidoIA");
+const GeneradorContenidoOpenAI = require("../src/lib/Generacion/Infraestructura/GeneradorContenidoOpenAI");
 const CatalogoRecursosJson = require("../src/lib/Juego/Infraestructura/CatalogoRecursosJson");
 const VersionJuego = require("../src/lib/Juego/Dominio/Entidades/VersionJuego");
 const { COMPATIBILIDAD, TEMATICAS } = require("../src/lib/Compartido/Dominio/ValoresPermitidos");
+
+// Cada proveedor con su clase y los nombres de sus variables de entorno
+const PROVEEDORES = {
+  openai: { Clase: GeneradorContenidoOpenAI, clave: "OPENAI_API_KEY", modelo: "OPENAI_MODELO", urlBase: "OPENAI_URL_BASE", razonamiento: "OPENAI_RAZONAMIENTO", opcionRazonamiento: (v) => ({ esfuerzoRazonamiento: v }) },
+  gemini: { Clase: GeneradorContenidoIA, clave: "GEMINI_API_KEY", modelo: "GEMINI_MODELO", urlBase: "GEMINI_URL_BASE", razonamiento: "GEMINI_RAZONAMIENTO", opcionRazonamiento: (v) => ({ presupuestoRazonamiento: Number(v) }) }
+};
 
 const CANTIDAD = 5;
 const TIEMPO_LIMITE_MS = 60_000; // tope de seguridad solo para esta medición; el límite real sale de estos resultados
@@ -28,11 +36,11 @@ const argumento = (nombre, defecto) => {
   return valor;
 };
 // La clave solo puede ir a un servidor local de pruebas o al proveedor real, nunca a otro host
-const urlBaseSegura = (url) => {
+const urlBaseSegura = (url, nombreVariable) => {
   if (!url) return undefined;
   const { hostname } = new URL(url);
   if (!["localhost", "127.0.0.1"].includes(hostname)) {
-    console.error("GEMINI_URL_BASE solo admite localhost o 127.0.0.1 (es para probar este script sin costo)");
+    console.error(`${nombreVariable} solo admite localhost o 127.0.0.1 (es para probar este script sin costo)`);
     process.exit(1);
   }
   return url;
@@ -84,7 +92,10 @@ async function main() {
     console.error("Esta medición hace llamadas reales con costo. Repite con --confirmo-costo cuando el presupuesto esté aprobado (S4-08).");
     process.exit(1);
   }
-  const faltan = ["GEMINI_API_KEY", "GEMINI_MODELO", "AI_MAX_TOKENS_SALIDA"].filter((n) => !process.env[n]);
+  const nombreProveedor = process.env.AI_PROVEEDOR && PROVEEDORES[process.env.AI_PROVEEDOR] ? process.env.AI_PROVEEDOR : "openai";
+  const proveedor = PROVEEDORES[nombreProveedor];
+  const modelo = process.env[proveedor.modelo];
+  const faltan = [proveedor.clave, proveedor.modelo, "AI_MAX_TOKENS_SALIDA"].filter((n) => !process.env[n]);
   if (faltan.length) {
     console.error(`Faltan variables de entorno: ${faltan.join(", ")}`);
     process.exit(1);
@@ -93,13 +104,14 @@ async function main() {
   const maxLlamadas = Math.min(argumento("max-llamadas", 12), TOPE_DURO_LLAMADAS);
   const casos = Object.keys(COMPATIBILIDAD).flatMap((habilidad) => TEMATICAS.map((tematica) => ({ habilidad, tematica })));
   const total = Math.min(casos.length * porCaso, maxLlamadas);
-  console.error(`Se harán ${total} llamadas reales a ${process.env.GEMINI_MODELO} (tope: ${maxLlamadas}).`);
+  console.error(`Se harán ${total} llamadas reales a ${nombreProveedor}/${modelo} (tope: ${maxLlamadas}).`);
 
   const catalogo = new CatalogoRecursosJson();
-  const generador = new GeneradorContenidoIA({
-    apiKey: process.env.GEMINI_API_KEY, modelo: process.env.GEMINI_MODELO, maxTokensSalida: Number(process.env.AI_MAX_TOKENS_SALIDA),
-    ...(urlBaseSegura(process.env.GEMINI_URL_BASE) && { urlBase: process.env.GEMINI_URL_BASE }), // solo para probar el script con un servidor local
-    ...(process.env.GEMINI_RAZONAMIENTO && { presupuestoRazonamiento: Number(process.env.GEMINI_RAZONAMIENTO) })
+  const urlBase = urlBaseSegura(process.env[proveedor.urlBase], proveedor.urlBase);
+  const generador = new proveedor.Clase({
+    apiKey: process.env[proveedor.clave], modelo, maxTokensSalida: Number(process.env.AI_MAX_TOKENS_SALIDA),
+    ...(urlBase && { urlBase }), // solo para probar el script con un servidor local
+    ...(process.env[proveedor.razonamiento] && proveedor.opcionRazonamiento(process.env[proveedor.razonamiento]))
   });
   const filas = [];
   // En serie: una llamada simultánea por docente es la regla del producto y así la latencia no se contamina
@@ -121,7 +133,7 @@ async function main() {
   const ms = filas.filter((f) => f.resultado === "valido" || f.resultado === "contenido_invalido").map((f) => f.ms);
 
   console.log(`# Medición de generación (${new Date().toISOString().slice(0, 10)})\n`);
-  console.log(`Modelo: ${process.env.GEMINI_MODELO} · tope de salida: ${process.env.AI_MAX_TOKENS_SALIDA} tokens · ejercicios por actividad: ${CANTIDAD}\n`);
+  console.log(`Proveedor: ${nombreProveedor} · modelo: ${modelo} · tope de salida: ${process.env.AI_MAX_TOKENS_SALIDA} tokens · ejercicios por actividad: ${CANTIDAD}\n`);
   console.log("| # | Habilidad | Temática | Resultado | ms | Tokens entrada | Tokens salida | Costo |");
   console.log("|---|---|---|---|---|---|---|---|");
   filas.forEach((f, i) => {

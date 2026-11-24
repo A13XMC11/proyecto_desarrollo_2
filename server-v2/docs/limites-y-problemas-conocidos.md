@@ -76,8 +76,8 @@ Prioridad: **Alta** si afecta seguridad o datos de personas; **Media** si afecta
 | # | Problema | Prioridad |
 |---|---|---|
 | I1 | Proveedor real sin medir ni habilitar (S4-06 a S4-08) | Media |
-| I2 | El adaptador de Gemini se escribió sin poder comprobar toda su documentación (nombre exacto de `responseJsonSchema`, encabezado de autenticación): se verifica en la primera llamada real; un rechazo falla sin reintentar | Media |
-| I3 | Documentación heredada que habla de «la API de Claude» como proveedor, mientras el plan y el adaptador usan Gemini | Baja: aclarar |
+| I2 | Los adaptadores de OpenAI y Gemini se escribieron sin llamar al servicio real (OpenAI: se verificó con pruebas y un servidor local que imita la API; Gemini: nombre exacto de `responseJsonSchema`, encabezado de autenticación): se verifican en la primera llamada real; un rechazo falla sin reintentar | Media |
+| I3 | Documentación heredada que habla de «la API de Claude» como proveedor, mientras el proveedor previsto es OpenAI (Gemini sigue disponible como alternativa) | Baja: aclarar |
 | I4 | Una respuesta que cumple todas las reglas puede seguir siendo pedagógicamente pobre: por eso la aprobación del docente es obligatoria | Baja: por diseño |
 
 ### Interfaz (observaciones menores, no corregidas)

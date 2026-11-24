@@ -16,7 +16,7 @@ flowchart LR
   end
   A -- "Sequelize" --> P[("PostgreSQL<br/>docentes, cursos, estudiantes,<br/>generaciones y cuotas de IA")]
   A -- "Mongoose" --> M[("MongoDB<br/>juegos, versiones, partidas,<br/>interacciones, canales, sesiones")]
-  A -. "solo al generar contenido" .-> G["Proveedor de IA (Gemini)<br/>apagado por defecto"]
+  A -. "solo al generar contenido" .-> G["Proveedor de IA (OpenAI)<br/>apagado por defecto"]
 ```
 
 - **Dos bases a propósito.** PostgreSQL para lo que necesita claves foráneas, unicidad y operaciones atómicas por fila (cuentas, cursos, estudiantes y **control de IA**: cupos y reservas). MongoDB para documentos que se leen enteros (juegos con sus ejercicios, partidas con sus intentos). Los ids de PostgreSQL se guardan como texto en MongoDB; no hay claves foráneas entre motores, así que **la propiedad se comprueba en la aplicación** antes de escribir.

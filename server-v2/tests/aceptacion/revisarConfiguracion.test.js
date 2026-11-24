@@ -51,6 +51,11 @@ describe("revisarConfiguracion: entorno", () => {
     assert.ok(completa.some((r) => r.nivel === "aviso" && /HABILITADA/.test(r.texto)), "habilitar la IA siempre pide una decisión");
   });
 
+  it("openai sin clave, modelo y tope de salida es un error que nombra las variables de OpenAI", () => {
+    const r = revisarEntorno({ ...entornoBueno, AI_ENABLED: "true", AI_PROVEEDOR: "openai", AI_TIEMPO_LIMITE_MS: "30000", AI_MARGEN_CONCILIACION_MS: "1", AI_PRESUPUESTO_MENSUAL: "1", AI_COSTO_MAXIMO_LLAMADA: "0.01", AI_TARIFA_ENTRADA_MTOK: "0", AI_TARIFA_SALIDA_MTOK: "0" });
+    assert.match(errores(r).join(), /OPENAI_API_KEY/);
+  });
+
   it("gemini sin clave, modelo y tope de salida es un error", () => {
     const r = revisarEntorno({ ...entornoBueno, AI_ENABLED: "true", AI_PROVEEDOR: "gemini", AI_TIEMPO_LIMITE_MS: "30000", AI_MARGEN_CONCILIACION_MS: "1", AI_PRESUPUESTO_MENSUAL: "1", AI_COSTO_MAXIMO_LLAMADA: "0.01", AI_TARIFA_ENTRADA_MTOK: "0", AI_TARIFA_SALIDA_MTOK: "0" });
     assert.match(errores(r).join(), /GEMINI_API_KEY/);

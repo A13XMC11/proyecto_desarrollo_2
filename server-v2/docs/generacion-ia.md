@@ -431,7 +431,7 @@ Sílabas:
 |---|---|---|
 | Texto que no es JSON, o JSON sin `ejercicios` | `GENERADOR_RESPUESTA_INVALIDA` | `GeneradorContenidoIA` |
 | Respuesta cortada por el tope de tokens (`MAX_TOKENS`) | `GENERADOR_RESPUESTA_INCOMPLETA` | `GeneradorContenidoIA` |
-| Solicitud bloqueada por el proveedor | `GENERADOR_BLOQUEADO` | `GeneradorContenidoIA` |
+| Solicitud bloqueada por el proveedor (en OpenAI: `refusal` o `content_filter`) | `GENERADOR_BLOQUEADO` | `GeneradorContenidoIA`, `GeneradorContenidoOpenAI` |
 | Sin candidatos | `GENERADOR_RESPUESTA_VACIA` | `GeneradorContenidoIA` |
 | `"recursoId": "dragon"` (no existe en el catálogo) | `CONTENIDO_INVALIDO` | Validación pedagógica |
 | `abeja` con `vocalesOpciones: ["e","i","o"]` (falta la correcta) | `CONTENIDO_INVALIDO` | Validación pedagógica |
@@ -444,17 +444,25 @@ Todas estas filas están automatizadas en `tests/lib/Generacion/Infraestructura/
 
 ## 5. Configuración del proveedor
 
-Proveedor previsto por el plan: Gemini (`AI_PROVEEDOR=gemini`). Sin valores por defecto que puedan costar dinero:
-si falta cualquiera de `GEMINI_API_KEY`, `GEMINI_MODELO` o `AI_MAX_TOKENS_SALIDA` el servidor no arranca. La clave va solo en el `.env` local
+Proveedor: **OpenAI** (`AI_PROVEEDOR=openai`, adaptador `GeneradorContenidoOpenAI`, Chat Completions con Structured Outputs estricto).
+Gemini (`AI_PROVEEDOR=gemini`) sigue disponible como alternativa. Sin valores por defecto que puedan costar dinero: con OpenAI, si falta
+cualquiera de `OPENAI_API_KEY`, `OPENAI_MODELO` o `AI_MAX_TOKENS_SALIDA` el servidor no arranca (con Gemini: `GEMINI_API_KEY`, `GEMINI_MODELO`, `AI_MAX_TOKENS_SALIDA`). La clave va solo en el `.env` local
 (ignorado por Git) o en el gestor de secretos del despliegue; nunca en el código, la URL ni los registros.
 
-Opcional: `GEMINI_RAZONAMIENTO` fija un tope de tokens de razonamiento (en modelos que razonan comparte el tope de salida; si la medición
+Opcional con OpenAI: `OPENAI_RAZONAMIENTO` se envía como `reasoning_effort` (p. ej. `low`); los tokens de razonamiento cuentan dentro de
+`AI_MAX_TOKENS_SALIDA` (`max_completion_tokens`) y `completion_tokens` ya los incluye, por eso el adaptador no los suma otra vez.
+El esquema que se envía es el mismo que con Gemini, adaptado al modo estricto (`additionalProperties:false`, todo en `required`, lo opcional
+admite `null` y se quita `minLength`/`maxLength`); el servidor vuelve a validar longitudes y contenido, así que no se pierde seguridad.
+
+Opcional con Gemini: `GEMINI_RAZONAMIENTO` fija un tope de tokens de razonamiento (en modelos que razonan comparte el tope de salida; si la medición
 muestra respuestas cortadas, fíjelo bajo). Al arrancar con la generación habilitada, el servidor comprueba que `AI_COSTO_MAXIMO_LLAMADA` cubra
 al menos el costo de `AI_MAX_TOKENS_SALIDA` y, si no, no arranca. Si el proveedor informa el uso antes de que una respuesta falle (p. ej. cortada
 por el tope), ese consumo se registra y la reserva no queda retenida; si no lo informa, se trata como desconocido.
 
-Pendiente de comprobar en la primera llamada real (la documentación del proveedor cambia con frecuencia y no se pudo verificar todo):
-el nombre exacto de `responseJsonSchema` frente a `responseSchema`, y que el modelo elegido admita `maxOutputTokens` y salida JSON.
+Pendiente de comprobar en la primera llamada real (la documentación del proveedor cambia con frecuencia y no se pudo verificar todo).
+Con OpenAI: que el modelo elegido admita `response_format` estricto y `max_completion_tokens`, y que acepte el esquema adaptado (no se probó
+contra el servicio real: solo con pruebas automáticas y un servidor local que imita la API). Con Gemini: el nombre exacto de
+`responseJsonSchema` frente a `responseSchema`, y que el modelo elegido admita `maxOutputTokens` y salida JSON.
 Si el proveedor rechaza el cuerpo, la generación queda `GENERADOR_ERROR` y no se reintenta.
 
 ## 6. S4-06 — Medición con solicitudes reales
@@ -479,8 +487,8 @@ Con esos resultados se fijan los valores que hoy no tienen defecto:
 | `AI_PRESUPUESTO_MENSUAL` | Decisión del equipo (S4-08) |
 | `AI_MAX_DIARIAS` | Medición y presupuesto; el plan propone 3 |
 
-Contrastar el consumo registrado en `generaciones_ia` con la facturación del proveedor. Si se usan tokens de razonamiento, el adaptador los
-suma a la salida porque se facturan como tal.
+Contrastar el consumo registrado en `generaciones_ia` con la facturación del proveedor. Si se usan tokens de razonamiento, se cuentan como
+salida porque se facturan como tal (con Gemini el adaptador los suma; con OpenAI `completion_tokens` ya los incluye).
 
 ### Resultados (completar con la medición)
 
@@ -494,7 +502,7 @@ Ya cubierto con generador falso en `tests/lib/Generacion/Aplicacion/FlujoGenerac
 (idempotencia, cupo concurrente, cancelación, conciliación, actividad aprobada que se abre sin nueva llamada).
 Con el proveedor real hay que repetir una vez a mano y dejar constancia:
 
-- [ ] Generar con `AI_PROVEEDOR=gemini` una actividad de vocales y una de sílabas, revisarlas, aprobarlas y jugarlas.
+- [ ] Generar con `AI_PROVEEDOR=openai` (o `gemini`) una actividad de vocales y una de sílabas, revisarlas, aprobarlas y jugarlas.
 - [ ] Repetir la actividad aprobada: el contador de solicitudes de IA no aumenta.
 - [ ] Clave inválida: la generación queda `GENERADOR_ERROR`, el docente ve un mensaje comprensible y la biblioteca sigue funcionando.
 - [ ] Con `AI_ENABLED=false` la biblioteca y las partidas funcionan y generar responde `GENERACION_DESHABILITADA`.

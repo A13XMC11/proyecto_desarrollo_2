@@ -63,7 +63,7 @@ AI_PRESUPUESTO_MENSUAL=1  AI_COSTO_MAXIMO_LLAMADA=0.01
 AI_TARIFA_ENTRADA_MTOK=0  AI_TARIFA_SALIDA_MTOK=0
 ```
 
-Para el proveedor real (`AI_PROVEEDOR=gemini`) ver `docs/generacion-ia.md`; no se enciende sin el presupuesto firmado.
+Para el proveedor real (`AI_PROVEEDOR=openai` o `gemini`) ver `docs/generacion-ia.md`; no se enciende sin el presupuesto firmado.
 
 ## 3. Pasos
 

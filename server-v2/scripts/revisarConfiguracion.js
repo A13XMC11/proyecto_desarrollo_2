@@ -77,7 +77,7 @@ function revisarEntorno(env) {
       const generador = crearGenerador(env);
       verificarCostoMaximo(configuracion, generador);
       registrar("aviso", "Generación con IA HABILITADA", "debe constar la autorización y el presupuesto (docs/generacion-ia.md §8); con proveedor real cada solicitud cuesta");
-      if (env.AI_PROVEEDOR === "gemini") registrar("ok", "Proveedor gemini configurado con clave, modelo y tope de salida; coste máximo coherente");
+      if (env.AI_PROVEEDOR === "openai" || env.AI_PROVEEDOR === "gemini") registrar("ok", `Proveedor ${env.AI_PROVEEDOR} configurado con clave, modelo y tope de salida; coste máximo coherente`);
       else registrar("ok", "Generador falso (sin proveedor ni costo)");
     }
   } catch (error) {
