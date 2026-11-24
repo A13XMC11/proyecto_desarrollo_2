@@ -9,6 +9,8 @@ const { obtenerClienteMongo } = require("../database/Mongo");
 // - Expira a las 4 h sin actividad (rolling) o a las 12 h desde que se inició (lo comprueba requerirDocente).
 const INACTIVIDAD_MS = 4 * 60 * 60 * 1000;
 const DURACION_MAXIMA_MS = 12 * 60 * 60 * 1000;
+// Un estudiante vuelve a escribir su código cada 4 h (una jornada de juego, no un día)
+const DURACION_ESTUDIANTE_MS = 4 * 60 * 60 * 1000;
 const NOMBRE_COOKIE = "letritas.sid";
 const CABECERA_CSRF = "x-csrf-token";
 
@@ -59,6 +61,24 @@ async function iniciarSesion(req, res, docenteId) {
   enviarTokenCsrf(req, res);
 }
 
+// Sesión del estudiante (acceso por código del curso). Vive en la misma cookie, bajo otra clave:
+// no da ningún permiso de docente y, si el docente probaba en este navegador, no le cierra su sesión.
+async function iniciarSesionEstudiante(req, res, datos) {
+  const { docenteId, iniciadaEn, csrf } = req.session || {};
+  await promesa(req, "regenerate"); // id nuevo: evita la fijación de sesión
+  if (docenteId) Object.assign(req.session, { docenteId, iniciadaEn });
+  req.session.csrf = csrf || crypto.randomBytes(32).toString("hex");
+  req.session.estudiante = { ...datos, iniciadaEn: Date.now() };
+  await promesa(req, "save");
+  enviarTokenCsrf(req, res);
+}
+
+async function cerrarSesionEstudiante(req) {
+  if (!req.session || !req.session.estudiante) return;
+  delete req.session.estudiante;
+  await promesa(req, "save");
+}
+
 // Al salir: se borra del almacén (revocación real, no solo en el navegador) y se limpia la cookie
 async function cerrarSesion(req, res) {
   if (req.session) await promesa(req, "destroy");
@@ -83,9 +103,12 @@ module.exports = {
   crearMiddlewareSesion,
   iniciarSesion,
   cerrarSesion,
+  iniciarSesionEstudiante,
+  cerrarSesionEstudiante,
   enviarTokenCsrf,
   csrfValido,
   DURACION_MAXIMA_MS,
+  DURACION_ESTUDIANTE_MS,
   INACTIVIDAD_MS,
   NOMBRE_COOKIE
 };

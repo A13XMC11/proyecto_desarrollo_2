@@ -20,6 +20,7 @@ const PaginaNuevaActividad = desde(() => import("./lib/Juego/Infraestructura/ui/
 const PaginaActividad = desde(() => import("./lib/Juego/Infraestructura/ui/PaginaActividad"), "PaginaActividad");
 const PaginaCrearConIA = desde(() => import("./lib/Generacion/Infraestructura/ui/PaginaCrearConIA"), "PaginaCrearConIA");
 const PaginaResultados = desde(() => import("./lib/Partida/Infraestructura/ui/PaginaResultados"), "PaginaResultados");
+const PaginaJugar = desde(() => import("./lib/Acceso/Infraestructura/ui/PaginaJugar"), "PaginaJugar");
 const PaginaAula = desde(() => import("./lib/Partida/Infraestructura/ui/PaginaAula"), "PaginaAula");
 
 const Espera = () => <div className="min-h-dvh bg-fondo" aria-busy="true" />;
@@ -55,6 +56,7 @@ export const App = () => (
             <Route path="resultados" element={<PaginaResultados />} />
             <Route path="cuenta" element={<PaginaCuenta />} />
           </Route>
+          <Route path="/jugar" element={<PaginaJugar />} />
           <Route path="/aula/partida/:partidaId" element={<PaginaAula />} />
           <Route path="/aula/:juegoId" element={<PaginaAula />} />
           <Route path="*" element={<NoEncontrada />} />

@@ -22,7 +22,7 @@ const Progreso = ({ ejercicios, indice }) => (
   </div>
 );
 
-const Final = ({ partida, alOtro, alSalir }) => {
+const Final = ({ partida, alOtro, alSalir, etiquetas }) => {
   const total = partida.ejercicios.length;
   const primerIntento = partida.ejercicios.filter((e) => e.acertado && e.intentos === 1).length;
   const resueltos = partida.ejercicios.filter((e) => e.acertado).length;
@@ -40,15 +40,18 @@ const Final = ({ partida, alOtro, alSalir }) => {
       </p>
       <p className="mt-1 text-tenue">{primerIntento} de {total} al primer intento.</p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Boton tamano="lg" onClick={alOtro}>Que juegue otro estudiante</Boton>
-        <Boton tamano="lg" variante="secundario" onClick={alSalir}>Volver al panel</Boton>
+        <Boton tamano="lg" onClick={alOtro}>{etiquetas.otro}</Boton>
+        <Boton tamano="lg" variante="secundario" onClick={alSalir}>{etiquetas.salir}</Boton>
       </div>
     </div>
   );
 };
 
-export const GamePlayer = ({ partidaId, alOtro, alSalir }) => {
-  const { partida, ejercicio, indice, fase, resultado, pista, enviando, error, responder, reintentar, continuar, pedirPista, recargar } = usePartida(partidaId);
+const ETIQUETAS_DOCENTE = { otro: "Que juegue otro estudiante", salir: "Volver al panel" };
+
+// api: de dónde salen y adónde van las respuestas (docente en el aula o estudiante con su sesión)
+export const GamePlayer = ({ partidaId, alOtro, alSalir, api, etiquetas = ETIQUETAS_DOCENTE }) => {
+  const { partida, ejercicio, indice, fase, resultado, pista, enviando, error, responder, reintentar, continuar, pedirPista, recargar } = usePartida(partidaId, api);
   const seccion = useRef(null);
 
   // Cada vez que toca responder (ejercicio nuevo, "Intentar otra vez" o tras mostrar la pista), el foco va a la primera opción:
@@ -62,7 +65,7 @@ export const GamePlayer = ({ partidaId, alOtro, alSalir }) => {
     return <div className="mx-auto h-96 w-full max-w-3xl animate-pulse rounded-3xl bg-white/70" role="status" aria-label="Cargando la actividad" />;
   }
   if (fase === "error") return <MensajeError error={error} alReintentar={recargar} />;
-  if (fase === "terminada") return <Final partida={partida} alOtro={alOtro} alSalir={alSalir} />;
+  if (fase === "terminada") return <Final partida={partida} alOtro={alOtro} alSalir={alSalir} etiquetas={etiquetas} />;
 
   const Mecanica = MECANICAS[ejercicio.tipo];
   const bloqueado = enviando || fase !== "respondiendo";

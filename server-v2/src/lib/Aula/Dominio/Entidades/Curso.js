@@ -3,7 +3,7 @@ const { GRADOS } = require("../../../Compartido/Dominio/ValoresPermitidos");
 const { enumerado, identificador } = require("../../../Compartido/Dominio/Validaciones");
 
 class Curso {
-  constructor({ id, docenteId, grado, paralelo, anioLectivo, archivado = false, creadoEn, actualizadoEn }) {
+  constructor({ id, docenteId, grado, paralelo, anioLectivo, archivado = false, codigoAcceso = null, creadoEn, actualizadoEn }) {
     const letra = typeof paralelo === "string" ? paralelo.trim().toUpperCase() : "";
     if (!/^[A-Z]$/.test(letra)) throw new EntradaInvalida("paralelo debe ser una letra de la A a la Z");
 
@@ -18,7 +18,9 @@ class Curso {
     this.grado = enumerado(grado, GRADOS, "grado");
     this.paralelo = letra;
     this.anioLectivo = anio;
+    if (codigoAcceso !== null && !/^[A-Z0-9]{8}$/.test(codigoAcceso)) throw new EntradaInvalida("codigoAcceso inválido");
     this.archivado = archivado;
+    this.codigoAcceso = codigoAcceso;
     this.creadoEn = creadoEn;
     this.actualizadoEn = actualizadoEn;
   }

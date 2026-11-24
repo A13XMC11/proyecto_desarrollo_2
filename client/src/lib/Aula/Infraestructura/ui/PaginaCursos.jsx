@@ -9,6 +9,7 @@ import { useCursos, useEstudiantes } from "../../Aplicacion/useAula";
 import { AulaApiHttp } from "../AulaApiHttp";
 import { FormularioCurso, FormularioEstudiante } from "./Formularios";
 import { Avatar } from "./Avatar";
+import { PanelAcceso } from "./PanelAcceso";
 
 const Confirmar = ({ abierto, titulo, texto, accion, alCerrar, alConfirmar }) => {
   const [enviando, setEnviando] = useState(false);
@@ -150,6 +151,8 @@ export const PaginaCursos = () => {
                   </div>
                 )}
               </div>
+
+              {!cursoActual.archivado && <PanelAcceso curso={cursoActual} alCambiar={cursos.recargar} />}
 
               <div className="p-5">
                 <MensajeError error={estudiantes.error} alReintentar={estudiantes.recargar} />

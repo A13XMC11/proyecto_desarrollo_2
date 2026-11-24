@@ -57,6 +57,26 @@ class CursoRepositorySequelize {
     }
   }
 
+  // El código solo se cambia por aquí (no por update): un PUT del curso no puede fijarlo a mano.
+  // Devuelve null si el curso no es del docente; un código repetido se traduce a CODIGO_ACCESO_REPETIDO.
+  async asignarCodigoAcceso(id, docenteId, codigoAcceso) {
+    if (!esUuid(id) || !esUuid(docenteId)) return null;
+    try {
+      const [, filas] = await CursoModel.update({ codigoAcceso }, { where: { id, docenteId }, returning: true });
+      return filas.length ? this.aEntidad(plano(filas[0])) : null;
+    } catch (error) {
+      if (esDuplicado(error)) throw new ConflictoDeEstado("El código ya existe; inténtalo de nuevo", "CODIGO_ACCESO_REPETIDO");
+      throw error;
+    }
+  }
+
+  // Solo cursos activos: un curso archivado no admite estudiantes
+  async findByCodigoAcceso(codigoAcceso) {
+    if (typeof codigoAcceso !== "string" || !/^[A-Z0-9]{8}$/.test(codigoAcceso)) return null;
+    const fila = await CursoModel.findOne({ where: { codigoAcceso, archivado: false } });
+    return fila ? this.aEntidad(plano(fila)) : null;
+  }
+
   async contarActivos(docenteId) {
     if (!esUuid(docenteId)) return 0;
     return CursoModel.count({ where: { docenteId, archivado: false } });
@@ -76,6 +96,7 @@ class CursoRepositorySequelize {
       paralelo: fila.paralelo,
       anioLectivo: fila.anioLectivo,
       archivado: fila.archivado,
+      codigoAcceso: fila.codigoAcceso || null,
       creadoEn: fila.creadoEn,
       actualizadoEn: fila.actualizadoEn
     });

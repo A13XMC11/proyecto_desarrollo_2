@@ -16,7 +16,9 @@ const CursoModel = obtenerSequelize().define(
     grado: { type: DataTypes.ENUM(...GRADOS), allowNull: false },
     paralelo: { type: DataTypes.STRING(1), allowNull: false, validate: { is: /^[A-Z]$/ } },
     anioLectivo: { type: DataTypes.STRING(9), allowNull: false, validate: { is: /^\d{4}-\d{4}$/ } },
-    archivado: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
+    archivado: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    // Código con el que los estudiantes entran a /jugar; vacío = acceso cerrado
+    codigoAcceso: { type: DataTypes.STRING(8), allowNull: true, unique: true, validate: { is: /^[A-Z0-9]{8}$/ } }
   },
   {
     tableName: "cursos",

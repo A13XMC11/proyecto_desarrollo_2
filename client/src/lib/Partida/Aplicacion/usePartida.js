@@ -7,7 +7,7 @@ import { PartidaApiHttp } from "../Infraestructura/PartidaApiHttp";
 // se reutiliza el mismo y el intento no cuenta dos veces.
 //
 // fases: cargando | respondiendo | reintentar | resuelto | terminada | error
-export const usePartida = (partidaId) => {
+export const usePartida = (partidaId, api = PartidaApiHttp) => {
   const [partida, setPartida] = useState(null);
   const [indice, setIndice] = useState(0);
   const [fase, setFase] = useState("cargando");
@@ -22,7 +22,7 @@ export const usePartida = (partidaId) => {
     setFase("cargando");
     setError(null);
     try {
-      const datos = await PartidaApiHttp.jugable(partidaId);
+      const datos = await api.jugable(partidaId);
       setPartida(datos);
       setIndice(Math.min(datos.ejercicioActual, datos.ejercicios.length - 1));
       setFase(datos.estado === "en_curso" ? "respondiendo" : "terminada");
@@ -30,7 +30,7 @@ export const usePartida = (partidaId) => {
       setError(e);
       setFase("error");
     }
-  }, [partidaId]);
+  }, [partidaId, api]);
 
   useEffect(() => {
     cargar();
@@ -51,7 +51,7 @@ export const usePartida = (partidaId) => {
     setEnviando(true);
     setError(null);
     try {
-      const r = await PartidaApiHttp.intento(partidaId, {
+      const r = await api.intento(partidaId, {
         ejercicioId: ejercicio.id,
         eleccion,
         operacionId: idOperacion(`intento:${ejercicio.id}:${ejercicio.intentos}`)
@@ -93,7 +93,7 @@ export const usePartida = (partidaId) => {
     setEnviando(true);
     setError(null);
     try {
-      const r = await PartidaApiHttp.pista(partidaId, { ejercicioId: ejercicio.id, operacionId: idOperacion(`pista:${ejercicio.id}`) });
+      const r = await api.pista(partidaId, { ejercicioId: ejercicio.id, operacionId: idOperacion(`pista:${ejercicio.id}`) });
       operacionPendiente.current = null;
       setPista(r.pista);
       actualizarEjercicio({ usoPista: true });

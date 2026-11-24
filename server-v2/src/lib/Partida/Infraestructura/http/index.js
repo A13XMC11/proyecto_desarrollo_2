@@ -1,5 +1,7 @@
 const PartidaRoutes = require("./PartidaRoutes");
 const PartidaController = require("./PartidaController");
+const AccesoEstudianteRoutes = require("./AccesoEstudianteRoutes");
+const AccesoEstudianteController = require("./AccesoEstudianteController");
 const InteraccionRoutes = require("./InteraccionRoutes");
 const InteraccionController = require("./InteraccionController");
 const ResultadoRoutes = require("./ResultadoRoutes");
@@ -14,6 +16,8 @@ const CanalRepositoryMongoose = require("../../../Canal/Infraestructura/CanalRep
 const EstudianteRepositorySequelize = require("../../../Aula/Infraestructura/EstudianteRepositorySequelize");
 const CursoRepositorySequelize = require("../../../Aula/Infraestructura/CursoRepositorySequelize");
 
+const ListarJuegosDeEstudiante = require("../../Aplicacion/ListarJuegosDeEstudiante");
+const ObtenerPerfilEstudiante = require("../../Aplicacion/ObtenerPerfilEstudiante");
 const IniciarPartida = require("../../Aplicacion/IniciarPartida");
 const ListarPartidas = require("../../Aplicacion/ListarPartidas");
 const ObtenerPartida = require("../../Aplicacion/ObtenerPartida");
@@ -56,6 +60,19 @@ module.exports = function registerPartidaModule(app) {
     obtenerResumenInicio: new ObtenerResumenInicio(repo, juegoRepo, new CursoRepositorySequelize())
   });
 
+  const estudianteRepo = new EstudianteRepositorySequelize();
+  const accesoEstudianteController = new AccesoEstudianteController({
+    obtenerPerfil: new ObtenerPerfilEstudiante(estudianteRepo),
+    listarJuegosDeEstudiante: new ListarJuegosDeEstudiante(repo, juegoRepo),
+    listarPartidas: controller.listarPartidas,
+    iniciarPartida: controller.iniciarPartida,
+    obtenerPartida: controller.obtenerPartida,
+    obtenerPartidaJugable: controller.obtenerPartidaJugable,
+    registrarIntento: controller.registrarIntento,
+    registrarPista: controller.registrarPista
+  });
+
+  app.use("/api/estudiante", AccesoEstudianteRoutes(accesoEstudianteController));
   app.use("/api/partidas", PartidaRoutes(controller));
   app.use("/api", ResultadoRoutes(resultadoController));
   app.use("/api/interacciones", InteraccionRoutes(interaccionController));

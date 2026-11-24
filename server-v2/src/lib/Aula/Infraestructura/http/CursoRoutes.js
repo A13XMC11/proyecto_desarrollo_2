@@ -10,6 +10,8 @@ module.exports = function CursoRoutes(controller) {
   router.get("/", envolverAsync(controller.listar));
   router.get("/:id", envolverAsync(controller.obtenerPorId));
   router.put("/:id", envolverAsync(controller.actualizar));
+  router.post("/:id/codigo-acceso", envolverAsync(controller.generarCodigo));
+  router.delete("/:id/codigo-acceso", envolverAsync(controller.revocarCodigo));
   router.delete("/:id", envolverAsync(controller.eliminar));
 
   return router;
