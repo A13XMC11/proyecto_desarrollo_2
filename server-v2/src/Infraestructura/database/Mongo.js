@@ -3,6 +3,8 @@ const cargarModelos = require("./cargarModelos");
 
 const DEFAULT_URI = "mongodb://127.0.0.1:27017/minijuegos-dev";
 
+const TIEMPO_SELECCION_SERVIDOR_MS = 5000;
+
 let oyentesRegistrados = false;
 
 async function connection() {
@@ -12,7 +14,8 @@ async function connection() {
     if (mongoose.connection.readyState === 1) return;
 
     cargarModelos();
-    await mongoose.connect(uri);
+    // Si Mongo no responde, falla en 5 s en vez de esperar los 30 s por defecto del driver
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: TIEMPO_SELECCION_SERVIDOR_MS });
 
     // Code first: construye las colecciones e índices declarados en los esquemas
     await Promise.all(Object.values(mongoose.models).map((modelo) => modelo.init()));
