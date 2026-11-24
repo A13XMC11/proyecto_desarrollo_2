@@ -8,7 +8,7 @@ const llamar = conServidor();
 
 describe("Contrato HTTP: generalidades", () => {
   prueba("health, 404 y rutas protegidas sin docente (401)", async () => {
-    assert.deepEqual((await llamar("/api/health")).cuerpo, { ok: true });
+    assert.deepEqual((await llamar("/api/health")).cuerpo, { ok: true, bases: { sql: "ok", mongo: "ok" } });
     assert.equal((await llamar("/api/nada")).status, 404);
     for (const ruta of ["/api/docentes", "/api/cursos", "/api/estudiantes", "/api/juegos", "/api/partidas", "/api/generaciones", "/api/cuotas", "/api/interacciones"]) {
       assert.equal((await llamar(ruta)).status, 401, ruta);

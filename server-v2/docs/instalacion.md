@@ -55,7 +55,7 @@ npm run dev      # con recarga automática
 npm start        # sin recarga
 ```
 
-Al conectar, el servidor **crea tablas, colecciones e índices desde los modelos** (code first); no hay migraciones. Comprobación: `GET http://localhost:3977/api/health` devuelve `{"ok":true}`.
+Al conectar, el servidor **crea tablas, colecciones e índices desde los modelos** (code first); no hay migraciones. Comprobación: `GET http://localhost:3977/api/health` devuelve `{"ok":true,"bases":{"sql":"ok","mongo":"ok"}}`; si alguna base no responde en 2 s devuelve 503 con esa base marcada como `"caida"`.
 
 ## 4. Cliente
 

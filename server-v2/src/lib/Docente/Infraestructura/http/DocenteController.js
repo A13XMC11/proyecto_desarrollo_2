@@ -12,10 +12,18 @@ class DocenteController {
     this.eliminarDocente = eliminarDocente;
   }
 
-  // Registrarse deja la sesión iniciada
+  // Registrarse deja la sesión iniciada. Si la sesión no se puede abrir (p. ej. MongoDB caído) la cuenta recién
+  // creada se deshace: así el docente puede reintentar el registro en vez de quedar con una cuenta a medias.
   registrar = async (req, res) => {
     const docente = await this.registrarDocente.ejecutar(req.body);
-    await iniciarSesion(req, res, docente.id);
+    try {
+      await iniciarSesion(req, res, docente.id);
+    } catch (error) {
+      await this.eliminarDocente.ejecutar(docente.id, docente.id).catch((fallo) => {
+        console.error("No se pudo deshacer el registro tras fallar la sesión:", fallo);
+      });
+      throw error;
+    }
     res.status(201).json(docente);
   };
 

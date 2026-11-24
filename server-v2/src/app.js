@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const { crearMiddlewareSesion } = require("./Infraestructura/http/sesion");
+const { estadoDeError } = require("./Infraestructura/http/estadoDeError");
+const { manejadorSalud } = require("./Infraestructura/http/salud");
 
 const registerDocenteModule = require("./lib/Docente/Infraestructura/http"); // auto-usa index.js del módulo
 const registerAulaModule = require("./lib/Aula/Infraestructura/http");
@@ -8,19 +10,6 @@ const registerJuegoModule = require("./lib/Juego/Infraestructura/http");
 const registerCanalModule = require("./lib/Canal/Infraestructura/http");
 const registerGeneracionModule = require("./lib/Generacion/Infraestructura/http");
 const registerPartidaModule = require("./lib/Partida/Infraestructura/http");
-
-// Errores de los motores de base de datos que el repositorio no tradujo: se responden aquí
-function estadoDeError(err) {
-  if (err.statusCode) return { status: err.statusCode, message: err.message };
-  if (err.code === 11000 || err.name === "SequelizeUniqueConstraintError") {
-    return { status: 409, message: "Ya existe un registro con esos datos" };
-  }
-  if (["ValidationError", "CastError", "SequelizeValidationError", "SequelizeForeignKeyConstraintError"].includes(err.name)) {
-    return { status: 400, message: "Los datos no cumplen las reglas de validación" };
-  }
-  // Cualquier otro error (incluidos los SQL inesperados) es del servidor, no del cliente
-  return { status: 500, message: "Error interno del servidor" };
-}
 
 function buildApp() {
   const app = express();
@@ -35,9 +24,11 @@ function buildApp() {
   app.use(cors({ origin: origenes.length ? origenes : false, credentials: true, exposedHeaders: ["X-CSRF-Token"] }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
-  app.use(crearMiddlewareSesion());
 
-  app.get("/api/health", (req, res) => res.json({ ok: true }));
+  // Salud antes de la sesión: debe responder (503) aunque MongoDB, que guarda las sesiones, esté caído
+  app.get("/api/health", manejadorSalud());
+
+  app.use(crearMiddlewareSesion());
 
   // Módulos
   registerDocenteModule(app);
