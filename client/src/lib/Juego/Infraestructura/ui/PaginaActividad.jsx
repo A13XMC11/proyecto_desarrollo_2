@@ -8,6 +8,7 @@ import { ESTADOS_JUEGO, HABILIDADES } from "../../Dominio/ValoresPermitidos";
 import { aContrato, aFormulario, revisar } from "../../Dominio/Ejercicios";
 import { aContratoLibre, aFormularioLibre, revisarLibre } from "../../Dominio/EjerciciosLibres";
 import { esLibre, nombreTematica } from "../../Dominio/Tematica";
+import { AVISOS_CORREGIR } from "../../Dominio/MensajesRevision";
 import { mensajeDeError } from "../../../Generacion/Dominio/Mensajes";
 import { useIconos, useJuego, useRecursos } from "../../Aplicacion/useJuegos";
 import { JuegoApiHttp } from "../JuegoApiHttp";
@@ -144,7 +145,7 @@ export const PaginaActividad = () => {
       const encontrados = revisarLibre(libres);
       setErrores(encontrados);
       const hay = encontrados.some((e) => Object.keys(e).length) || titulo.trim().length < 3;
-      if (hay) avisar("Hay textos por corregir. Están marcados en rojo.", "error");
+      if (hay) avisar(AVISOS_CORREGIR.textos, "error");
       return !hay;
     }
     if (!recursos.length) {
@@ -154,7 +155,7 @@ export const PaginaActividad = () => {
     const encontrados = revisar(ejercicios, habilidad, recursos);
     setErrores(encontrados);
     const hay = encontrados.some((e) => Object.keys(e).length);
-    if (hay) avisar("Hay ejercicios por corregir. Están marcados en rojo.", "error");
+    if (hay) avisar(AVISOS_CORREGIR.ejercicios, "error");
     return !hay;
   };
 

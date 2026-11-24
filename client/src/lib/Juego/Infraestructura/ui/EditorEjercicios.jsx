@@ -1,4 +1,4 @@
-import { Plus, Trash2, Wand2 } from "lucide-react";
+import { AlertCircle, Plus, Trash2, Wand2 } from "lucide-react";
 import { Boton, Campo, Selector } from "../../../../Infraestructura/ui/componentes";
 import { ejercicioVacio, recursosPara, sugerirSegunHabilidad, usaOpciones } from "../../Dominio/Ejercicios";
 
@@ -35,7 +35,9 @@ const EjercicioOpcion = ({ ejercicio, recurso, recursos, habilidad, errores, cam
         ))}
       </div>
       {errores.opciones ? (
-        <p role="alert" className="mt-1.5 text-sm text-error">{errores.opciones}</p>
+        <p role="alert" className="mt-1.5 flex items-center gap-1.5 text-sm text-error">
+          <AlertCircle className="size-4 shrink-0" aria-hidden="true" /> {errores.opciones}
+        </p>
       ) : (
         <button type="button" onClick={sugerir} disabled={!puedeSugerir} className="mt-2 inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-marca-700 hover:bg-marca-50 disabled:cursor-not-allowed disabled:text-slate-400">
           <Wand2 className="size-4" aria-hidden="true" /> {puedeSugerir ? TEXTO_SUGERIR[habilidad] : "Elige una palabra para sugerir las opciones"}

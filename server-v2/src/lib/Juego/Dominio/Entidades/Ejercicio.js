@@ -60,7 +60,13 @@ class Ejercicio {
   esRespuestaCorrecta(eleccion) {
     if (this.tipo === "seleccionar_opcion") return typeof eleccion === "string" && eleccion === this.respuestaCorrectaId;
     if (this.tipo === "ordenar_silabas") {
-      return Array.isArray(eleccion) && eleccion.length === this.ordenCorrecto.length && eleccion.every((id, i) => id === this.ordenCorrecto[i]);
+      if (!Array.isArray(eleccion) || eleccion.length !== this.ordenCorrecto.length) return false;
+      // Debe usar cada pieza exactamente una vez (no vale repetir una para igualar el texto)
+      if (new Set(eleccion).size !== eleccion.length) return false;
+      const textoDe = new Map(this.piezas.map((p) => [p.id, p.texto]));
+      if (!eleccion.every((id) => textoDe.has(id))) return false;
+      // Se compara lo que dice cada pieza: en pa-pa-ya las dos «pa» son intercambiables
+      return eleccion.every((id, i) => textoDe.get(id) === textoDe.get(this.ordenCorrecto[i]));
     }
     return false;
   }

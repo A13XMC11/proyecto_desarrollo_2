@@ -51,6 +51,30 @@ describe("Entidad Ejercicio", () => {
     assert.equal(new Ejercicio(ejOrden()).tipo, "ordenar_silabas");
   });
 
+  describe("ordenar_silabas con sílabas repetidas (pa-pa-ya)", () => {
+    const papaya = () => new Ejercicio({
+      id: "e1", consigna: "Ordena", palabraId: "papaya",
+      piezas: [{ id: "p1", texto: "pa" }, { id: "p2", texto: "pa" }, { id: "p3", texto: "ya" }],
+      ordenCorrecto: ["p1", "p2", "p3"]
+    });
+
+    it("acepta las dos «pa» en cualquier orden: lo que cuenta es la palabra formada, no qué pieza idéntica se tocó primero", () => {
+      assert.equal(papaya().esRespuestaCorrecta(["p1", "p2", "p3"]), true);
+      assert.equal(papaya().esRespuestaCorrecta(["p2", "p1", "p3"]), true);
+    });
+
+    it("sigue rechazando un orden distinto de la palabra", () => {
+      assert.equal(papaya().esRespuestaCorrecta(["p1", "p3", "p2"]), false);
+      assert.equal(papaya().esRespuestaCorrecta(["p3", "p1", "p2"]), false);
+    });
+
+    it("no se deja engañar repitiendo una pieza ni con piezas que no existen ni con piezas de menos", () => {
+      assert.equal(papaya().esRespuestaCorrecta(["p1", "p1", "p3"]), false);
+      assert.equal(papaya().esRespuestaCorrecta(["p1", "px", "p3"]), false);
+      assert.equal(papaya().esRespuestaCorrecta(["p1", "p2"]), false);
+    });
+  });
+
   it("rechaza consigna o pista largas, o con URLs", () => {
     assert.throws(() => new Ejercicio({ ...ejSeleccion(), consigna: "x".repeat(141) }), EntradaInvalida);
     assert.throws(() => new Ejercicio({ ...ejSeleccion(), pista: "x".repeat(101) }), EntradaInvalida);

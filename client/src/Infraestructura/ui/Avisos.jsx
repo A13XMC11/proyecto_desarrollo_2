@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { CheckCircle2, AlertCircle } from "lucide-react";
+import { describirAviso } from "./descripcionAviso";
 
 const ContextoAvisos = createContext(() => {});
 
-// Avisos breves (4 s). Se anuncian con aria-live sin robar el foco; el temporizador se pausa
-// si la pestaña está oculta, para que el aviso no desaparezca sin que nadie lo vea.
+// Avisos breves (4 s). Se anuncian sin robar el foco: los errores en una región role="alert" (de inmediato) y
+// los éxitos en una región polite. Ambas regiones existen siempre, vacías, para que el lector detecte lo que llega.
+// El temporizador se pausa si la pestaña está oculta, para que el aviso no desaparezca sin que nadie lo vea.
 export const ProveedorAvisos = ({ children }) => {
   const [avisos, setAvisos] = useState([]);
   const siguienteId = useRef(0);
@@ -19,10 +21,17 @@ export const ProveedorAvisos = ({ children }) => {
   return (
     <ContextoAvisos.Provider value={avisar}>
       {children}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-6 sm:items-end">
-        {avisos.map((aviso) => (
-          <Aviso key={aviso.id} aviso={aviso} alTerminar={quitar} />
-        ))}
+      <div className="pointer-events-none fixed inset-x-4 bottom-4 z-50 flex flex-col items-center gap-2 sm:inset-x-auto sm:right-6 sm:items-end">
+        {["error", "exito"].map((tipo) => {
+          const { rol, region } = describirAviso(tipo);
+          return (
+            <div key={tipo} role={rol} aria-live={region} className="flex w-full flex-col items-center gap-2 sm:items-end">
+              {avisos.filter((a) => describirAviso(a.tipo).rol === rol).map((aviso) => (
+                <Aviso key={aviso.id} aviso={aviso} alTerminar={quitar} />
+              ))}
+            </div>
+          );
+        })}
       </div>
     </ContextoAvisos.Provider>
   );
@@ -53,7 +62,10 @@ const Aviso = ({ aviso, alTerminar }) => {
   return (
     <div className="aviso pointer-events-auto flex w-full max-w-sm items-center gap-3 rounded-2xl bg-tinta px-4 py-3 text-sm text-white shadow-xl">
       <Icono className={`size-5 shrink-0 ${aviso.tipo === "error" ? "text-red-300" : "text-green-300"}`} aria-hidden="true" />
-      {aviso.texto}
+      <span>
+        <span className="sr-only">{describirAviso(aviso.tipo).prefijo}</span>
+        {aviso.texto}
+      </span>
     </div>
   );
 };
