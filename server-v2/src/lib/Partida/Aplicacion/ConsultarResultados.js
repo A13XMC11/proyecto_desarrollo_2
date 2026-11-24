@@ -1,6 +1,7 @@
 const IndicadoresPartida = require("../Dominio/Entidades/IndicadoresPartida");
 const { HABILIDADES } = require("../../Compartido/Dominio/ValoresPermitidos");
 const { enumerado, fechaOpcional } = require("../../Compartido/Dominio/Validaciones");
+const { cargarJuegos, cargarVersiones } = require("./cargarJuegosYVersiones");
 
 // Resultados del docente por estudiante, curso y habilidad (S5-03, §7.3).
 // - Los agregados usan solo partidas finalizadas; las en curso y abandonadas se cuentan aparte.
@@ -21,8 +22,8 @@ class ConsultarResultados {
       hasta: fechaOpcional(hasta, "hasta")
     });
 
-    const juegos = await this.cargarJuegos(docenteId, sesiones);
-    const versiones = await this.cargarVersiones(sesiones);
+    const juegos = await cargarJuegos(this.juegoRepository, docenteId, sesiones);
+    const versiones = await cargarVersiones(this.versionRepository, sesiones);
 
     const partidas = sesiones.map((s) => {
       const juego = juegos.get(s.juegoId);
@@ -54,19 +55,6 @@ class ConsultarResultados {
       porHabilidad: agrupar(finalizadas.filter((p) => p.habilidad), "habilidad"),
       partidas
     };
-  }
-
-  // Una consulta por juego distinto (no por partida)
-  async cargarJuegos(docenteId, sesiones) {
-    const ids = [...new Set(sesiones.map((s) => s.juegoId))];
-    const juegos = await Promise.all(ids.map((id) => this.juegoRepository.findById(id, docenteId)));
-    return new Map(juegos.filter(Boolean).map((j) => [j.id, j]));
-  }
-
-  async cargarVersiones(sesiones) {
-    const pares = new Map(sesiones.map((s) => [s.versionId, s.juegoId]));
-    const versiones = await Promise.all([...pares].map(([versionId, juegoId]) => this.versionRepository.findById(versionId, juegoId)));
-    return new Map(versiones.filter(Boolean).map((v) => [v.id, v]));
   }
 }
 

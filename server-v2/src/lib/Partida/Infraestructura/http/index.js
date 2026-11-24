@@ -29,6 +29,7 @@ const AbandonarPartida = require("../../Aplicacion/AbandonarPartida");
 const RegistrarInteraccion = require("../../Aplicacion/RegistrarInteraccion");
 const ListarInteracciones = require("../../Aplicacion/ListarInteracciones");
 const ConsultarResultados = require("../../Aplicacion/ConsultarResultados");
+const SugerirRepaso = require("../../Aplicacion/SugerirRepaso");
 const ObtenerResumenInicio = require("../../Aplicacion/ObtenerResumenInicio");
 
 module.exports = function registerPartidaModule(app) {
@@ -57,6 +58,7 @@ module.exports = function registerPartidaModule(app) {
 
   const resultadoController = new ResultadoController({
     consultarResultados: new ConsultarResultados(repo, juegoRepo, versionRepo),
+    sugerirRepaso: new SugerirRepaso(repo, juegoRepo, versionRepo),
     obtenerResumenInicio: new ObtenerResumenInicio(repo, juegoRepo, new CursoRepositorySequelize())
   });
 

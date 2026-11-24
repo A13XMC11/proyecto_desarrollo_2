@@ -1,11 +1,13 @@
+import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BarChart3, Play } from "lucide-react";
-import { BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector, Tarjeta } from "../../../../Infraestructura/ui/componentes";
-import { useConsulta } from "../../../../Infraestructura/http/useConsulta";
+import { BarChart3, Lightbulb, Play } from "lucide-react";
+import { Boton, BotonEnlace, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector, Tarjeta } from "../../../../Infraestructura/ui/componentes";
+import { useAccion, useConsulta } from "../../../../Infraestructura/http/useConsulta";
 import { useCursos, useEstudiantes } from "../../../Aula/Aplicacion/useAula";
 import { HABILIDADES, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
 import { fraccion, porcentaje } from "../../Dominio/Indicadores";
 import { PartidaApiHttp } from "../PartidaApiHttp";
+import { PanelRepaso } from "./PanelRepaso";
 
 const ESTADOS = { en_curso: { texto: "En curso", tono: "azul" }, finalizada: { texto: "Terminada", tono: "verde" }, abandonada: { texto: "Abandonada", tono: "gris" } };
 
@@ -41,6 +43,23 @@ export const PaginaResultados = () => {
     [cursoId, estudianteId, habilidad, juegoId]
   );
 
+  // La sugerencia se pide con un botón y describe lo que el docente tiene filtrado; al cambiar un filtro se descarta
+  const [repaso, setRepaso] = useState(null);
+  const pedirRepaso = useCallback(() => PartidaApiHttp.repaso({ cursoId, estudianteId, habilidad, juegoId }), [cursoId, estudianteId, habilidad, juegoId]);
+  const accionRepaso = useAccion(pedirRepaso);
+  const { limpiarError: limpiarErrorRepaso } = accionRepaso;
+  useEffect(() => {
+    setRepaso(null);
+    limpiarErrorRepaso();
+  }, [cursoId, estudianteId, habilidad, juegoId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sugerirRepaso = async () => {
+    try {
+      setRepaso(await accionRepaso.ejecutar());
+    } catch {
+      // el error queda en accionRepaso.error y se muestra debajo
+    }
+  };
+
   const cambiar = (clave, valor) => {
     const nuevos = new URLSearchParams(parametros);
     if (valor) nuevos.set(clave, valor);
@@ -60,7 +79,8 @@ export const PaginaResultados = () => {
   return (
     <>
       <title>Resultados · Letritas</title>
-      <Encabezado titulo="Resultados" descripcion="Describen cómo les fue en las actividades. No son una calificación ni un diagnóstico: sirven para decidir dónde reforzar." />
+      <Encabezado titulo="Resultados" descripcion="Describen cómo les fue en las actividades. No son una calificación ni un diagnóstico: sirven para decidir dónde reforzar."
+        acciones={<Boton variante="secundario" cargando={accionRepaso.enviando} onClick={sugerirRepaso}><Lightbulb className="size-5" aria-hidden="true" /> ¿Qué repasar?</Boton>} />
 
       <div className="mb-6 grid gap-3 rounded-2xl border border-borde bg-white p-4 sm:grid-cols-3">
         <Selector etiqueta="Curso" value={cursoId} onChange={(e) => cambiar("curso", e.target.value)} opciones={[{ valor: "", texto: "Todos" }, ...(cursos.datos || []).map((c) => ({ valor: c.id, texto: nombreCurso(c) }))]} />
@@ -73,6 +93,9 @@ export const PaginaResultados = () => {
           <button type="button" className="cursor-pointer font-medium text-marca-700 underline underline-offset-2" onClick={() => cambiar("juego", "")}>Ver todas</button>
         </p>
       )}
+
+      <MensajeError error={accionRepaso.error} alReintentar={sugerirRepaso} />
+      {repaso && <PanelRepaso repaso={repaso} />}
 
       <MensajeError error={resultados.error} alReintentar={resultados.recargar} />
 
