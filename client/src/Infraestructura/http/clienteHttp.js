@@ -48,6 +48,10 @@ const MENSAJES_POR_ESTADO = {
   500: "Algo falló en el servidor. Inténtalo de nuevo en un momento."
 };
 
+// 502-504 sin cuerpo de la API los da el proxy cuando el servidor no responde: es falta de conexión. Si la
+// respuesta trae el mensaje de la API (p. ej. un 503 porque una base de datos cayó), ese mensaje es el bueno.
+export const esFaltaDeConexion = (estado, datos) => estado >= 502 && estado <= 504 && !(datos && datos.message);
+
 const enviar = async (url, metodo, cuerpo, cabeceras) => {
   try {
     const respuesta = await fetch(url, {
@@ -93,8 +97,7 @@ export const pedir = async (ruta, { metodo = "GET", cuerpo, consulta, cabeceras 
 
   if (!respuesta.ok) {
     if (respuesta.status === 401 && habiaSesion) alExpirar();
-    // 502-504 los da el proxy cuando el servidor no responde: es falta de conexión, no un error de datos
-    if (respuesta.status >= 502 && respuesta.status <= 504) throw new ErrorApi(MENSAJES_POR_ESTADO[0], { estado: 0 });
+    if (esFaltaDeConexion(respuesta.status, datos)) throw new ErrorApi(MENSAJES_POR_ESTADO[0], { estado: 0 });
     const mensaje = (datos && datos.message) || MENSAJES_POR_ESTADO[respuesta.status] || MENSAJES_POR_ESTADO[500];
     throw new ErrorApi(mensaje, { estado: respuesta.status, codigo: datos && datos.codigo });
   }
