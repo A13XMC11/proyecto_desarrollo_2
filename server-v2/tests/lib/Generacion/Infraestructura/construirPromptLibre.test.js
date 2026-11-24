@@ -13,12 +13,13 @@ const bloque = (texto, etiqueta) => (texto.match(new RegExp(`<${etiqueta}>\\n([\
 const sinBloques = (texto) => texto.replace(/<(tematica_docente|instruccion_docente)>[\s\S]*?<\/\1>/g, "<bloque/>");
 
 describe("construirPromptGeneracion: el modo catálogo no cambia", () => {
-  // Huellas (SHA-256) del prompt y el esquema del catálogo, tomadas ANTES de añadir el modo libre
+  // Huellas (SHA-256) del prompt y el esquema del catálogo. Se actualizaron una sola vez, al añadir la regla de que la
+  // consigna no escriba sílabas ni partes de la palabra (sin esa línea del sistema, las huellas son las originales)
   const HUELLAS = {
-    "vocales 5": "e07101e82af22f06", "vocales 10": "705259f49ceb0eb8",
-    "palabras_silabas 5": "4998219f785714d7", "palabras_silabas 10": "d4e0969869d2003b",
-    "completar_silaba 5": "6cd0937b5dacfdbc", "completar_silaba 10": "b5f316220c35d288",
-    "contar_silabas 5": "50916964fe6872b3", "contar_silabas 10": "0d8fdd7c25745b9c"
+    "vocales 5": "09a327cdd10f7540", "vocales 10": "89635130b86ad082",
+    "palabras_silabas 5": "b46e88e40d8f96cf", "palabras_silabas 10": "df69a421667fd200",
+    "completar_silaba 5": "a609d0c29cd4180c", "completar_silaba 10": "e86ed9efb921b834",
+    "contar_silabas 5": "d4699c5a2aa91472", "contar_silabas 10": "bd16ceddbea7b137"
   };
   const catalogo = new CatalogoRecursosJson();
 
@@ -218,8 +219,8 @@ describe("construirPromptGeneracion: modo libre, el tamaño no crece sin control
 
   it("con la temática y la instrucción al máximo sigue siendo pequeño", () => {
     const m = medida(maximo);
-    // Medido: sistema 863, usuario 1564 (40 de temática + 500 de instrucción) y esquema 452 caracteres
-    assert.ok(m.sistema <= 1100, `sistema ${m.sistema}`);
+    // Medido: sistema 1124 (863 + la regla de la consigna), usuario 1564 (40 de temática + 500 de instrucción) y esquema 452 caracteres
+    assert.ok(m.sistema <= 1250, `sistema ${m.sistema}`);
     assert.ok(m.usuario <= 2000, `usuario ${m.usuario}`);
     assert.ok(m.esquema <= 600, `esquema ${m.esquema}`);
   });
