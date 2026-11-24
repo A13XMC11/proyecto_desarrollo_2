@@ -106,6 +106,11 @@ class GeneradorContenidoIA {
   // `lista` es la propiedad que debe ser una lista; con `soloCampos` cualquier otra propiedad invalida la respuesta
   // (en el catálogo los campos extra se descartan; en la temática libre se rechaza la respuesta entera).
   leerContenido(respuesta, { lista = "ejercicios", soloCampos } = {}) {
+    return this.interpretarTexto(this.leerTexto(respuesta), { lista, soloCampos });
+  }
+
+  // El texto de la primera respuesta del proveedor; un bloqueo o una respuesta cortada no sirven
+  leerTexto(respuesta) {
     if (respuesta?.promptFeedback?.blockReason) {
       throw new ErrorDelGenerador("El proveedor de IA bloqueó la solicitud", "GENERADOR_BLOQUEADO");
     }
@@ -114,8 +119,39 @@ class GeneradorContenidoIA {
     if (candidato.finishReason && candidato.finishReason !== "STOP") {
       throw new ErrorDelGenerador(`El proveedor de IA no terminó la respuesta (${candidato.finishReason})`, "GENERADOR_RESPUESTA_INCOMPLETA");
     }
-    const texto = (candidato.content?.parts || []).filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("");
-    return this.interpretarTexto(texto, { lista, soloCampos });
+    return (candidato.content?.parts || []).filter((p) => !p.thought && typeof p.text === "string").map((p) => p.text).join("");
+  }
+
+  // Una sola llamada que devuelve un objeto JSON cualquiera (no ejercicios): { contenido, uso }. Sin reintentos.
+  // Lo que devuelve es una propuesta no confiable: quien la pide la valida. Si falla después de llamar y el
+  // proveedor informó el consumo, el error lo conserva para no reservar de más.
+  async redactarJson({ sistema, usuario, esquema }, { signal } = {}) {
+    const respuesta = await this.llamar({ sistema, usuario, esquema }, signal);
+    const uso = this.leerUso(respuesta);
+    try {
+      return { contenido: this.interpretarObjeto(this.leerTexto(respuesta)), uso };
+    } catch (error) {
+      if (error instanceof ErrorDelGenerador && uso.tokensEntrada !== undefined) error.uso = uso;
+      throw error;
+    }
+  }
+
+  // Un proveedor puede, por ejemplo, rellenar con null los campos opcionales: aquí se limpia antes de comprobar la forma
+  normalizarRespuesta(valor) {
+    return valor;
+  }
+
+  interpretarObjeto(texto) {
+    let contenido;
+    try {
+      contenido = this.normalizarRespuesta(JSON.parse(texto));
+    } catch (error) {
+      throw new ErrorDelGenerador("El proveedor de IA no devolvió un JSON válido", "GENERADOR_RESPUESTA_INVALIDA");
+    }
+    if (!contenido || typeof contenido !== "object" || Array.isArray(contenido)) {
+      throw new ErrorDelGenerador("El JSON del proveedor de IA no tiene la forma esperada", "GENERADOR_RESPUESTA_INVALIDA");
+    }
+    return contenido;
   }
 
   // Del texto que devolvió el proveedor al objeto con la forma esperada. `normalizar` limpia el objeto ya leído

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { GraduationCap, Info, ShieldAlert, Sparkles, X } from "lucide-react";
 import { AreaTexto, Boton, BotonEnlace, Campo, Cargando, Encabezado, EstadoVacio, Insignia, MensajeError, Selector, Tarjeta } from "../../../../Infraestructura/ui/componentes";
 import { useAvisos } from "../../../../Infraestructura/ui/Avisos";
@@ -10,6 +10,7 @@ import { CANTIDADES_EJERCICIOS, ESTADOS_GENERACION, HABILIDADES, MODOS_TEMATICA,
 import { nombreTematica } from "../../../Juego/Dominio/Tematica";
 import { EJEMPLOS_TEMATICA, MAX_TEMATICA, ayudaTematica, normalizarTematica, revisarTematica } from "../../Dominio/TematicaLibre";
 import { mensajeDeError } from "../../Dominio/Mensajes";
+import { leerRefuerzo } from "../../../Partida/Dominio/Refuerzo";
 import { GeneracionApiHttp } from "../GeneracionApiHttp";
 
 const MAX_INSTRUCCION = 500;
@@ -52,10 +53,16 @@ const Cupo = ({ cuotas }) => {
 export const PaginaCrearConIA = () => {
   const avisar = useAvisos();
   const cursos = useCursos({ archivado: false });
-  const [datos, setDatos] = useState({ cursoId: "", estudianteId: "", habilidad: "vocales", modo: "catalogo", tematica: "animales", tematicaLibre: "", cantidad: 5, instruccion: "" });
+  // Desde «¿Qué repasar?» se llega con la habilidad, el curso y las palabras ya puestas (validadas al leerlas)
+  const [parametros] = useSearchParams();
+  const [datos, setDatos] = useState(() => ({
+    cursoId: "", estudianteId: "", habilidad: "vocales", modo: "catalogo", tematica: "animales", tematicaLibre: "", cantidad: 5, instruccion: "",
+    ...leerRefuerzo(parametros, Object.keys(HABILIDADES))
+  }));
   const [tocada, setTocada] = useState(false); // el error de forma de la temática solo se muestra tras escribir o intentar enviar
   const [anuncio, setAnuncio] = useState(""); // lo que lee un lector de pantalla cuando cambia el estado
-  const cursoId = datos.cursoId || cursos.datos?.[0]?.id || "";
+  // Un curso que ya no existe (enlace viejo) cae al primero de la lista
+  const cursoId = (cursos.datos || []).some((c) => c.id === datos.cursoId) ? datos.cursoId : cursos.datos?.[0]?.id || "";
   const estudiantes = useEstudiantes({ cursoId, archivado: false });
   const generaciones = useConsulta(() => GeneracionApiHttp.listar(), []);
   const cuotas = useConsulta(() => GeneracionApiHttp.cuotas(), []);

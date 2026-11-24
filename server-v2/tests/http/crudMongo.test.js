@@ -371,6 +371,54 @@ describe("CRUD HTTP sobre MongoDB", () => {
     assert.equal((await llamar("/api/inicio")).status, 401);
   });
 
+  prueba("repaso: sugiere dónde reforzar con las partidas terminadas propias, sin datos de otro docente", async () => {
+    const esc = await escenario();
+    assert.equal((await llamar("/api/resultados/repaso")).status, 401, "sin sesión");
+
+    const vacio = await llamar("/api/resultados/repaso", { docente: esc.docente });
+    assert.equal(vacio.status, 200);
+    assert.deepEqual([vacio.cuerpo.suficiente, vacio.cuerpo.partidas, vacio.cuerpo.habilidades], [false, 0, []]);
+
+    const juego = (await crearJuego(esc)).cuerpo.id;
+    const rutaV = `/api/juegos/${juego}/versiones`;
+    const version = (await llamar(rutaV, { metodo: "POST", docente: esc.docente, cuerpo: { tematica: "animales", cantidadEjercicios: 5, ejercicios: ejercicios(5) } })).cuerpo.id;
+    await llamar(`${rutaV}/${version}/aprobar`, { metodo: "POST", docente: esc.docente });
+
+    // e1 a e3: mal y luego bien; e4 y e5: bien al primer intento
+    const partida = (await llamar("/api/partidas", { metodo: "POST", docente: esc.docente, cuerpo: { estudianteId: esc.estudiante, juegoId: juego } })).cuerpo.id;
+    const ruta = `/api/partidas/${partida}`;
+    let n = 0;
+    const responder = (ejercicioId, eleccion) =>
+      llamar(`${ruta}/intentos`, { metodo: "POST", docente: esc.docente, cuerpo: { ejercicioId, eleccion, operacionId: `rep-${++n}` } });
+    await responder("e1", "i"); await responder("e1", "a");
+    await responder("e2", "i"); await responder("e2", "o");
+    await responder("e3", "i"); await responder("e3", "a");
+    await responder("e4", "a");
+
+    // Mientras la partida sigue en curso no cuenta; al acertar el último ejercicio termina sola
+    assert.equal((await llamar(`/api/resultados/repaso?cursoId=${esc.curso}`, { docente: esc.docente })).cuerpo.partidas, 0);
+    await responder("e5", "a");
+
+    const r = await llamar(`/api/resultados/repaso?cursoId=${esc.curso}`, { docente: esc.docente });
+    assert.equal(r.status, 200);
+    assert.deepEqual([r.cuerpo.suficiente, r.cuerpo.partidas, r.cuerpo.respondidos], [true, 1, 5]);
+    const [vocales] = r.cuerpo.habilidades;
+    assert.deepEqual(
+      [vocales.habilidad, vocales.respondidos, vocales.falloPrimerIntento, vocales.sinResolver, vocales.repasar],
+      ["vocales", 5, 3, 0, true]
+    );
+
+    assert.equal((await llamar("/api/resultados/repaso?habilidad=palabras_silabas", { docente: esc.docente })).cuerpo.partidas, 0);
+    assert.equal((await llamar("/api/resultados/repaso?habilidad=otra", { docente: esc.docente })).status, 400);
+    assert.equal((await llamar("/api/resultados/repaso?cursoId[$ne]=x", { docente: esc.docente })).status, 200, "los filtros no aceptan operadores");
+    assert.equal((await llamar("/api/resultados/repaso", { docente: esc.ajeno })).cuerpo.partidas, 0, "otro docente no ve estas partidas");
+
+    // La recomendación con IA viene apagada por defecto (AI_ENABLED): no gasta nada y lo dice
+    const apagada = await llamar("/api/resultados/repaso/recomendacion", { metodo: "POST", docente: esc.docente, cuerpo: {} });
+    assert.equal(apagada.status, 503);
+    assert.equal(apagada.cuerpo.codigo, "RECOMENDACION_DESHABILITADA");
+  });
+
   // Demostración del sprint 5 (§14): versión 2, partidas anteriores intactas, filtros y archivo
   prueba("versiones y biblioteca: una versión nueva no cambia lo ya jugado; archivar preserva resultados", async () => {
     const esc = await escenario();

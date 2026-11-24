@@ -48,6 +48,15 @@ describe("ConfiguracionGeneracion", () => {
     assert.equal(c.vencimientoMs, 35000);
   });
 
+  it("las recomendaciones de repaso tienen un límite mensual por docente (20 por defecto)", () => {
+    assert.equal(new ConfiguracionGeneracion().maxRecomendaciones, 20);
+    assert.equal(new ConfiguracionGeneracion({ maxRecomendaciones: 5 }).maxRecomendaciones, 5);
+    assert.equal(leer({}).maxRecomendaciones, 20);
+    assert.equal(leer({ AI_MAX_RECOMENDACIONES_MENSUALES: "7" }).maxRecomendaciones, 7);
+    assert.throws(() => new ConfiguracionGeneracion({ maxRecomendaciones: 0 }), EntradaInvalida);
+    assert.throws(() => leer({ AI_MAX_RECOMENDACIONES_MENSUALES: "muchas" }), EntradaInvalida);
+  });
+
   it("es inmutable", () => {
     const c = new ConfiguracionGeneracion(completa);
     assert.ok(Object.isFrozen(c));

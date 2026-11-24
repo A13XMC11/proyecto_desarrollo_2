@@ -17,7 +17,7 @@ const numero = (valor, campo, { exclusivoCero = false } = {}) => {
 // tras medir el modelo (S4-06 y S4-08): no hay valores por defecto que puedan costar dinero.
 class ConfiguracionGeneracion {
   constructor({
-    habilitada = false, libreHabilitada = false, maxDiarias = 3, maxSimultaneas = 1, permitirDiez = false, zonaHoraria = "America/Guayaquil",
+    habilitada = false, libreHabilitada = false, maxDiarias = 3, maxSimultaneas = 1, maxRecomendaciones = 20, permitirDiez = false, zonaHoraria = "America/Guayaquil",
     tiempoLimiteMs, margenConciliacionMs, presupuestoMensual, costoMaximoLlamada, tarifaEntrada, tarifaSalida
   } = {}) {
     if (typeof habilitada !== "boolean" || typeof libreHabilitada !== "boolean" || typeof permitirDiez !== "boolean") throw new EntradaInvalida("configuración de generación inválida");
@@ -27,6 +27,8 @@ class ConfiguracionGeneracion {
     this.permitirDiez = permitirDiez;
     this.maxDiarias = entero(maxDiarias, "maxDiarias", 1);
     this.maxSimultaneas = entero(maxSimultaneas, "maxSimultaneas", 1);
+    // Recomendaciones de repaso con IA por docente y mes; usan el mismo presupuesto global que la generación
+    this.maxRecomendaciones = entero(maxRecomendaciones, "maxRecomendaciones", 1);
     periodoDiario(new Date(), zonaHoraria); // rechaza una zona horaria inexistente al arrancar
     this.zonaHoraria = zonaHoraria;
 
