@@ -2,8 +2,9 @@ const { iniciarSesion, cerrarSesion, enviarTokenCsrf } = require("../../../../In
 
 // Crear y cerrar la sesión del navegador es responsabilidad del controlador, no regla de negocio (§5.2.4)
 class DocenteController {
-  constructor({ registrarDocente, listarDocentes, obtenerDocentePorId, obtenerDocenteActual, actualizarDocente, eliminarDocente, iniciarSesion: casoIniciarSesion }) {
+  constructor({ registrarDocente, listarDocentes, obtenerDocentePorId, obtenerDocenteActual, actualizarDocente, eliminarDocente, iniciarSesion: casoIniciarSesion, limitadorLogin }) {
     this.casoIniciarSesion = casoIniciarSesion;
+    this.limitadorLogin = limitadorLogin;
     this.registrarDocente = registrarDocente;
     this.listarDocentes = listarDocentes;
     this.obtenerDocentePorId = obtenerDocentePorId;
@@ -28,8 +29,27 @@ class DocenteController {
   };
 
   // Entrar: el id de sesión se regenera y el token CSRF llega en la cabecera X-CSRF-Token
+  // Los intentos fallidos se limitan por IP y correo (fuerza bruta): al agotarse responde 429 con Retry-After
   entrar = async (req, res) => {
-    const docente = await this.casoIniciarSesion.ejecutar(req.body);
+    const correo = req.body && req.body.correo;
+    const limitador = this.limitadorLogin;
+    if (limitador) {
+      try {
+        limitador.verificar(req.ip, correo);
+      } catch (error) {
+        if (error.segundosEspera) res.set("Retry-After", String(error.segundosEspera));
+        throw error;
+      }
+    }
+    let docente;
+    try {
+      docente = await this.casoIniciarSesion.ejecutar(req.body);
+    } catch (error) {
+      // Solo cuentan las credenciales equivocadas, no los datos mal formados
+      if (limitador && error.codigo === "CREDENCIALES_INVALIDAS") limitador.registrarFallo(req.ip, correo);
+      throw error;
+    }
+    if (limitador) limitador.registrarExito(req.ip, correo);
     await iniciarSesion(req, res, docente.id);
     res.json(docente);
   };
