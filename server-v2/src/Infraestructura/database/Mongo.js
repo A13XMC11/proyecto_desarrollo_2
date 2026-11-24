@@ -20,6 +20,13 @@ async function connection() {
     // Code first: construye las colecciones e índices declarados en los esquemas
     await Promise.all(Object.values(mongoose.models).map((modelo) => modelo.init()));
 
+    // connect-mongo crea este índice al construir el middleware, pero esa operación
+    // es asíncrona. Debe estar listo antes de que el servidor empiece a escuchar.
+    await mongoose.connection.collection("sesiones").createIndex(
+      { expires: 1 },
+      { expireAfterSeconds: 0 }
+    );
+
     console.log(`Se ha conectado a la bdd Mongo: ${mongoose.connection.name}`);
 
     if (!oyentesRegistrados) {

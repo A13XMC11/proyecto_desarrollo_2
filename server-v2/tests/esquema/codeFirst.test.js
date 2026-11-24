@@ -52,7 +52,7 @@ describe("Code first: el esquema sale de los modelos (sin migraciones ni DDL esc
 
   prueba("MongoDB: colecciones e índices salen de los esquemas", async () => {
     const colecciones = (await mongoose.connection.db.listCollections().toArray()).map((c) => c.name).sort();
-    assert.deepEqual(colecciones, ["canales", "interacciones", "juegos", "sesionesJuego", "versionesJuego"]);
+    assert.deepEqual(colecciones, ["canales", "interacciones", "juegos", "sesiones", "sesionesJuego", "versionesJuego"]);
 
     const nombres = async (coleccion) => (await mongoose.connection.db.collection(coleccion).indexes()).map((i) => i.name);
     assert.ok((await nombres("canales")).includes("codigo_unico"));
@@ -61,5 +61,7 @@ describe("Code first: el esquema sale de los modelos (sin migraciones ni DDL esc
     assert.ok((await nombres("sesionesJuego")).includes("una_partida_en_curso_parcial"));
     assert.ok((await nombres("juegos")).includes("generacion_unica_parcial"));
     assert.ok((await nombres("interacciones")).includes("operacion_unica_por_sesion_tipo_parcial"));
+    const indicesSesiones = await mongoose.connection.db.collection("sesiones").indexes();
+    assert.ok(indicesSesiones.some((indice) => indice.key.expires === 1 && indice.expireAfterSeconds === 0));
   });
 });
