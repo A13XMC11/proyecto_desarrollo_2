@@ -57,13 +57,14 @@ export const Header17 = () => {
       }`}
     >
       <header className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" aria-label="Letritas, inicio" className="rounded-md">
+        {/* min-h-11 en pantallas táctiles (tabletas): zona de toque de 44 px */}
+        <Link to="/" aria-label="Letritas, inicio" className="flex items-center rounded-md pointer-coarse:min-h-11">
           <Logo />
         </Link>
 
         <nav className="hidden items-center gap-0.5 md:flex" aria-label="Principal">
           {navLinks.map((link) => (
-            <a key={link.label} href={link.href} className="rounded-md px-3 py-2 text-[15px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+            <a key={link.label} href={link.href} className="flex items-center rounded-md px-3 py-2 pointer-coarse:min-h-11 text-[15px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
               {link.label}
             </a>
           ))}
