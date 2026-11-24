@@ -30,7 +30,20 @@ const RegistrarInteraccion = require("../../Aplicacion/RegistrarInteraccion");
 const ListarInteracciones = require("../../Aplicacion/ListarInteracciones");
 const ConsultarResultados = require("../../Aplicacion/ConsultarResultados");
 const SugerirRepaso = require("../../Aplicacion/SugerirRepaso");
+const RecomendarRepaso = require("../../Aplicacion/RecomendarRepaso");
+const RedactorRecomendacionIA = require("../RedactorRecomendacionIA");
+const RedactorRecomendacionFalso = require("../RedactorRecomendacionFalso");
+// La recomendación con IA comparte configuración, contadores de cupo y proveedores con la generación (Generacion)
+const leerConfiguracionGeneracion = require("../../../Generacion/Infraestructura/leerConfiguracionGeneracion");
+const CuotaRepositorySequelize = require("../../../Generacion/Infraestructura/CuotaRepositorySequelize");
+const { crearGenerador } = require("../../../Generacion/Infraestructura/http");
 const ObtenerResumenInicio = require("../../Aplicacion/ObtenerResumenInicio");
+
+// AI_PROVEEDOR=falso (por defecto) redacta con las cifras y sin consumo; con gemini u openai usa el mismo cliente que la generación
+function crearRedactor(env = process.env) {
+  if ((env.AI_PROVEEDOR || "falso") === "falso") return new RedactorRecomendacionFalso();
+  return new RedactorRecomendacionIA({ cliente: crearGenerador(env) });
+}
 
 module.exports = function registerPartidaModule(app) {
   const repo = new SesionJuegoRepositoryMongoose();
@@ -56,9 +69,13 @@ module.exports = function registerPartidaModule(app) {
     listarInteracciones: new ListarInteracciones(interaccionRepo, repo)
   });
 
+  const sugerirRepaso = new SugerirRepaso(repo, juegoRepo, versionRepo);
   const resultadoController = new ResultadoController({
     consultarResultados: new ConsultarResultados(repo, juegoRepo, versionRepo),
-    sugerirRepaso: new SugerirRepaso(repo, juegoRepo, versionRepo),
+    sugerirRepaso,
+    recomendarRepaso: new RecomendarRepaso({
+      sugerirRepaso, redactor: crearRedactor(), cuotaRepository: new CuotaRepositorySequelize(), config: leerConfiguracionGeneracion()
+    }),
     obtenerResumenInicio: new ObtenerResumenInicio(repo, juegoRepo, new CursoRepositorySequelize())
   });
 

@@ -1,13 +1,29 @@
-import { Lightbulb } from "lucide-react";
-import { Insignia, Tarjeta } from "../../../../Infraestructura/ui/componentes";
+import { Lightbulb, Sparkles } from "lucide-react";
+import { Boton, BotonEnlace, Insignia, MensajeError, Tarjeta } from "../../../../Infraestructura/ui/componentes";
 import { HABILIDADES } from "../../../Juego/Dominio/ValoresPermitidos";
 import { fraccion } from "../../Dominio/Indicadores";
+import { mensajeDeRecomendacion } from "../../Dominio/MensajesRepaso";
+import { enlaceRefuerzo, habilidadesParaReforzar } from "../../Dominio/Refuerzo";
 
 const nombreHabilidad = (clave) => HABILIDADES[clave]?.texto || clave;
 
+// Texto que redactó la IA con esas mismas cifras; las cifras de arriba siguen siendo lo que manda
+const Recomendacion = ({ datos }) => (
+  <Tarjeta className="mt-3">
+    <h3 className="mb-2 flex items-center gap-2 font-bold"><Sparkles className="size-4 text-marca-600" aria-hidden="true" /> Recomendación de la IA</h3>
+    <p className="mb-2">{datos.resumen}</p>
+    <ul className="list-disc space-y-1 pl-5">
+      {datos.sugerencias.map((s) => <li key={s}>{s}</li>)}
+    </ul>
+    <p className="mt-3 text-sm text-tenue">Es una sugerencia redactada por IA: revísala con tu criterio. Te quedan {datos.cupoRestante} {datos.cupoRestante === 1 ? "recomendación" : "recomendaciones"} este mes.</p>
+  </Tarjeta>
+);
+
 // Sugerencia de repaso para el docente. Es descriptiva: siempre muestra las cifras que la respaldan.
-export const PanelRepaso = ({ repaso }) => {
+// iaHabilitada: el servidor tiene la recomendación con IA encendida. Con ella se pide el texto y se ofrece crear refuerzos.
+export const PanelRepaso = ({ repaso, cursoId, iaHabilitada = false, recomendacion = {}, onRecomendar }) => {
   const aRepasar = repaso.habilidades.filter((h) => h.repasar);
+  const refuerzos = habilidadesParaReforzar(repaso);
 
   return (
     <section aria-labelledby="titulo-repaso" className="mb-8 rounded-2xl border border-marca-200 bg-marca-50/40 p-5">
@@ -71,6 +87,27 @@ export const PanelRepaso = ({ repaso }) => {
               )}
             </Tarjeta>
           </div>
+
+          {recomendacion.datos && <Recomendacion datos={recomendacion.datos} />}
+          {recomendacion.error && (
+            <div className="mt-3"><MensajeError error={{ message: mensajeDeRecomendacion(recomendacion.error) }} alReintentar={iaHabilitada ? onRecomendar : undefined} /></div>
+          )}
+
+          {(iaHabilitada || refuerzos.length > 0) && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {iaHabilitada && (
+                <Boton variante="secundario" cargando={recomendacion.enviando} onClick={onRecomendar}>
+                  <Sparkles className="size-5" aria-hidden="true" /> {recomendacion.datos ? "Redactar de nuevo" : "Redactar recomendación con IA"}
+                </Boton>
+              )}
+              {refuerzos.map((h) => (
+                <BotonEnlace key={h} variante="fantasma" to={enlaceRefuerzo({ habilidad: h, palabras: repaso.palabras, cursoId })}>
+                  Crear refuerzo: {nombreHabilidad(h)}
+                </BotonEnlace>
+              ))}
+            </div>
+          )}
+          {iaHabilitada && <p className="mt-2 text-sm text-tenue">A la IA solo se envían las cifras de arriba, sin nombres. Cada recomendación usa una de tu cupo mensual; crear un refuerzo usa tu cupo diario de actividades.</p>}
         </>
       )}
     </section>

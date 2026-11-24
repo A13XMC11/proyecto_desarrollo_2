@@ -412,6 +412,11 @@ describe("CRUD HTTP sobre MongoDB", () => {
     assert.equal((await llamar("/api/resultados/repaso?habilidad=otra", { docente: esc.docente })).status, 400);
     assert.equal((await llamar("/api/resultados/repaso?cursoId[$ne]=x", { docente: esc.docente })).status, 200, "los filtros no aceptan operadores");
     assert.equal((await llamar("/api/resultados/repaso", { docente: esc.ajeno })).cuerpo.partidas, 0, "otro docente no ve estas partidas");
+
+    // La recomendación con IA viene apagada por defecto (AI_ENABLED): no gasta nada y lo dice
+    const apagada = await llamar("/api/resultados/repaso/recomendacion", { metodo: "POST", docente: esc.docente, cuerpo: {} });
+    assert.equal(apagada.status, 503);
+    assert.equal(apagada.cuerpo.codigo, "RECOMENDACION_DESHABILITADA");
   });
 
   // Demostración del sprint 5 (§14): versión 2, partidas anteriores intactas, filtros y archivo

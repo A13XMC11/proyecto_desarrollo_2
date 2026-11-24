@@ -1,9 +1,10 @@
 const FILTROS = ["cursoId", "estudianteId", "habilidad", "juegoId", "desde", "hasta"];
 
 class ResultadoController {
-  constructor({ consultarResultados, sugerirRepaso, obtenerResumenInicio }) {
+  constructor({ consultarResultados, sugerirRepaso, recomendarRepaso, obtenerResumenInicio }) {
     this.consultarResultados = consultarResultados;
     this.sugerirRepaso = sugerirRepaso;
+    this.recomendarRepaso = recomendarRepaso;
     this.obtenerResumenInicio = obtenerResumenInicio;
   }
 
@@ -22,6 +23,11 @@ class ResultadoController {
 
   repaso = async (req, res) => {
     res.json(await this.sugerirRepaso.ejecutar(req.docenteId, this.filtrosDe(req.query)));
+  };
+
+  // Gasta cupo y presupuesto de IA: por eso es POST (exige CSRF) y los filtros viajan en el cuerpo
+  recomendacion = async (req, res) => {
+    res.json(await this.recomendarRepaso.ejecutar(req.docenteId, this.filtrosDe(req.body && typeof req.body === "object" ? req.body : {})));
   };
 
   inicio = async (req, res) => {

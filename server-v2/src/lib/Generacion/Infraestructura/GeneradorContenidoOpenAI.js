@@ -39,6 +39,10 @@ class GeneradorContenidoOpenAI extends GeneradorContenidoIA {
 
   // Extrae el JSON de la primera opción. Un rechazo, un filtro o una respuesta cortada no sirven.
   leerContenido(respuesta, { lista = "ejercicios", soloCampos } = {}) {
+    return this.interpretarTexto(this.leerTexto(respuesta), { lista, soloCampos, normalizar: quitarNulos });
+  }
+
+  leerTexto(respuesta) {
     const opcion = respuesta?.choices?.[0];
     if (!opcion) throw new ErrorDelGenerador("El proveedor de IA no devolvió contenido", "GENERADOR_RESPUESTA_VACIA");
     if (opcion.message?.refusal || opcion.finish_reason === "content_filter") {
@@ -47,8 +51,12 @@ class GeneradorContenidoOpenAI extends GeneradorContenidoIA {
     if (opcion.finish_reason && opcion.finish_reason !== "stop") {
       throw new ErrorDelGenerador(`El proveedor de IA no terminó la respuesta (${opcion.finish_reason})`, "GENERADOR_RESPUESTA_INCOMPLETA");
     }
-    const texto = typeof opcion.message?.content === "string" ? opcion.message.content : "";
-    return this.interpretarTexto(texto, { lista, soloCampos, normalizar: quitarNulos });
+    return typeof opcion.message?.content === "string" ? opcion.message.content : "";
+  }
+
+  // El modo estricto rellena con null lo opcional: se quita para que se vea como ausente
+  normalizarRespuesta(valor) {
+    return quitarNulos(valor);
   }
 
   // completion_tokens ya incluye los tokens de razonamiento (se facturan como salida). Si falta algún dato se

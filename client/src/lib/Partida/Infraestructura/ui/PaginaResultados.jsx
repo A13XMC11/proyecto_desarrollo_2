@@ -7,6 +7,7 @@ import { useCursos, useEstudiantes } from "../../../Aula/Aplicacion/useAula";
 import { HABILIDADES, nombreCurso, nombreEstudiante, opcionesDe } from "../../../Juego/Dominio/ValoresPermitidos";
 import { fraccion, porcentaje } from "../../Dominio/Indicadores";
 import { PartidaApiHttp } from "../PartidaApiHttp";
+import { GeneracionApiHttp } from "../../../Generacion/Infraestructura/GeneracionApiHttp";
 import { PanelRepaso } from "./PanelRepaso";
 
 const ESTADOS = { en_curso: { texto: "En curso", tono: "azul" }, finalizada: { texto: "Terminada", tono: "verde" }, abandonada: { texto: "Abandonada", tono: "gris" } };
@@ -45,18 +46,34 @@ export const PaginaResultados = () => {
 
   // La sugerencia se pide con un botón y describe lo que el docente tiene filtrado; al cambiar un filtro se descarta
   const [repaso, setRepaso] = useState(null);
+  const [recomendacion, setRecomendacion] = useState(null);
   const pedirRepaso = useCallback(() => PartidaApiHttp.repaso({ cursoId, estudianteId, habilidad, juegoId }), [cursoId, estudianteId, habilidad, juegoId]);
+  const pedirRecomendacion = useCallback(() => PartidaApiHttp.recomendacion({ cursoId, estudianteId, habilidad, juegoId }), [cursoId, estudianteId, habilidad, juegoId]);
   const accionRepaso = useAccion(pedirRepaso);
+  const accionRecomendacion = useAccion(pedirRecomendacion);
   const { limpiarError: limpiarErrorRepaso } = accionRepaso;
+  const { limpiarError: limpiarErrorRecomendacion } = accionRecomendacion;
   useEffect(() => {
     setRepaso(null);
+    setRecomendacion(null);
     limpiarErrorRepaso();
+    limpiarErrorRecomendacion();
   }, [cursoId, estudianteId, habilidad, juegoId]); // eslint-disable-line react-hooks/exhaustive-deps
   const sugerirRepaso = async () => {
     try {
       setRepaso(await accionRepaso.ejecutar());
     } catch {
       // el error queda en accionRepaso.error y se muestra debajo
+    }
+  };
+  // El servidor decide si la IA está encendida; hasta saberlo el botón de redactar no aparece
+  const cuotas = useConsulta(() => GeneracionApiHttp.cuotas(), []);
+  const iaHabilitada = cuotas.datos?.generacionHabilitada === true;
+  const redactarRecomendacion = async () => {
+    try {
+      setRecomendacion({ datos: await accionRecomendacion.ejecutar() });
+    } catch {
+      // El código del error se traduce a un mensaje fijo en el panel
     }
   };
 
@@ -95,7 +112,12 @@ export const PaginaResultados = () => {
       )}
 
       <MensajeError error={accionRepaso.error} alReintentar={sugerirRepaso} />
-      {repaso && <PanelRepaso repaso={repaso} />}
+      {repaso && (
+        <PanelRepaso
+          repaso={repaso} cursoId={cursoId} iaHabilitada={iaHabilitada} onRecomendar={redactarRecomendacion}
+          recomendacion={{ datos: recomendacion?.datos, enviando: accionRecomendacion.enviando, error: accionRecomendacion.error }}
+        />
+      )}
 
       <MensajeError error={resultados.error} alReintentar={resultados.recargar} />
 
